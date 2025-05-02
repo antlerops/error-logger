@@ -1,0 +1,20 @@
+{
+  "name": "antlerops/error-logger",
+  "description": "Advanced error logger with multiple transport options and rate limiting",
+  "type": "library",
+  "require": {
+    "php": "^8.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Antler\\ErrorLogger\\": "src/"
+    }
+  },
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Antler",
+      "email": "antler@aranea-development.nl"
+    }
+  ]
+}
