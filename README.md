@@ -44,10 +44,70 @@ $logger->error('Payment failed', ['user_id' => 42, 'amount' => 100]);
 
 ## Environment Variables
 
-These can be used instead of hardcoding values in configuration:
+All configuration options can be set via environment variables (values in code take precedence):
 
-- `ANTLER_LOG_ENDPOINT`: Sets `remote_endpoint`
-- `PROJECT_HASH`: Sets `project_hash`
+- `ANTLER_LOG_ENDPOINT`: Remote logging API URL
+- `ANTLER_PROJECT_HASH`: Project identifier
+- `ANTLER_LOG_FILE_PATH`: Path to local log file
+- `ANTLER_LOG_REQUEST_TIMEOUT`: Remote request timeout in seconds (integer)
+- `ANTLER_LOG_MIN_LOG_LEVEL`: Minimum severity (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- `ANTLER_LOG_USE_REMOTE_LOGGING`: Enable remote logging (true/false)
+- `ANTLER_LOG_USE_FILE_LOGGING`: Enable file logging (true/false)
+- `ANTLER_LOG_USE_ERROR_LOG`: Enable PHP error_log fallback (true/false)
+- `ANTLER_LOG_RATE_LIMIT_PER_MINUTE`: Max logs per minute (integer)
+
+## Configuration Examples
+
+### Environment Variables Example (.env)
+```ini
+ANTLER_PROJECT_HASH="proj_1234"
+ANTLER_LOG_ENDPOINT="https://logs.yourservice.com"
+ANTLER_LOG_MIN_LOG_LEVEL="DEBUG"
+ANTLER_LOG_FILE_PATH="/var/logs/app.log"
+ANTLER_LOG_USE_FILE_LOGGING="true"
+```
+
+PHP code:
+```php
+// Empty config will use environment variables
+$logger = Logger::getInstance(new LoggerConfig());
+```
+
+### Hardcoded Configuration Example
+```php
+$config = [
+    'project_hash' => 'proj_1234',
+    'remote_endpoint' => 'https://logs.yourservice.com',
+    'min_log_level' => LogLevel::DEBUG,
+    'log_file_path' => '/var/logs/app.log',
+    'use_file_logging' => true,
+    'rate_limit_per_minute' => 100
+];
+
+$logger = Logger::getInstance(new LoggerConfig($config));
+```
+
+### Mixed Configuration Example
+.env:
+```ini
+ANTLER_PROJECT_HASH="proj_1234"
+ANTLER_LOG_REQUEST_TIMEOUT="5"
+```
+
+PHP code:
+```php
+$config = [
+    'remote_endpoint' => 'https://logs.yourservice.com',  // Overrides env if present
+    'use_error_log' => false
+];
+
+// Uses: 
+// - remote_endpoint from array
+// - project_hash from env
+// - request_timeout from env
+// - use_error_log from array
+$logger = Logger::getInstance(new LoggerConfig($config));
+```
 
 ## Error Levels
 
@@ -60,7 +120,6 @@ LogLevel::WARNING  // 300
 LogLevel::ERROR    // 400
 LogLevel::CRITICAL // 500
 ```
-
 ## Advanced Setup
 
 ### Custom Configuration

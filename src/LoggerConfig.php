@@ -31,15 +31,54 @@ class LoggerConfig
      */
     public function __construct(array $config = [])
     {
-        $this->logFilePath = $config['log_file_path'] ?? getcwd() . '/logs/application.log';
+        // Log file path: ANTLER_LOG_FILE_PATH
+        $this->logFilePath = $config['log_file_path'] ?? getenv('ANTLER_LOG_FILE_PATH') ?: getcwd() . '/logs/application.log';
+
+        // Remote endpoint: ANTLER_LOG_ENDPOINT (existing)
         $this->remoteEndpoint = $config['remote_endpoint'] ?? getenv('ANTLER_LOG_ENDPOINT') ?: null;
-        $this->projectHash = $config['project_hash'] ?? getenv('PROJECT_HASH') ?: null;
-        $this->requestTimeout = $config['request_timeout'] ?? 2;
-        $this->minLogLevel = $config['min_log_level'] ?? LogLevel::WARNING;
-        $this->useRemoteLogging = $config['use_remote_logging'] ?? true;
-        $this->useFileLogging = $config['use_file_logging'] ?? true;
-        $this->useErrorLog = $config['use_error_log'] ?? true;
-        $this->rateLimitPerMinute = $config['rate_limit_per_minute'] ?? 60;
+
+        // Project hash: PROJECT_HASH (existing)
+        $this->projectHash = $config['project_hash'] ?? getenv('ANTLER_PROJECT_HASH') ?: null;
+
+        // Request timeout: ANTLER_LOG_REQUEST_TIMEOUT (parsed as int)
+        $this->requestTimeout = $config['request_timeout'] ?? (int)(getenv('ANTLER_LOG_REQUEST_TIMEOUT') ?: 2);
+
+        // Min log level: ANTLER_LOG_MIN_LOG_LEVEL (mapped to LogLevel constant)
+        $this->minLogLevel = $config['min_log_level'] ?? $this->getMinLogLevelFromEnv();
+
+        // Use remote logging: ANTLER_LOG_USE_REMOTE_LOGGING (parsed as bool)
+        $this->useRemoteLogging = $config['use_remote_logging'] ?? $this->getEnvBool('ANTLER_LOG_USE_REMOTE_LOGGING', true);
+
+        // Use file logging: ANTLER_LOG_USE_FILE_LOGGING (parsed as bool)
+        $this->useFileLogging = $config['use_file_logging'] ?? $this->getEnvBool('ANTLER_LOG_USE_FILE_LOGGING', true);
+
+        // Use error log: ANTLER_LOG_USE_ERROR_LOG (parsed as bool)
+        $this->useErrorLog = $config['use_error_log'] ?? $this->getEnvBool('ANTLER_LOG_USE_ERROR_LOG', true);
+
+        // Rate limit: ANTLER_LOG_RATE_LIMIT_PER_MINUTE (parsed as int)
+        $this->rateLimitPerMinute = $config['rate_limit_per_minute'] ?? (int)(getenv('ANTLER_LOG_RATE_LIMIT_PER_MINUTE') ?: 60);
+    }
+
+    /**
+     * Helper method to parse a boolean from an environment variable.
+     */
+    private function getEnvBool(string $envVar, bool $default): bool
+    {
+        $value = getenv($envVar);
+        return $value !== false ? filter_var($value, FILTER_VALIDATE_BOOLEAN) : $default;
+    }
+
+    /**
+     * Helper method to parse min log level from environment variable.
+     */
+    private function getMinLogLevelFromEnv(): int
+    {
+        $envLogLevel = getenv('ANTLER_LOG_MIN_LOG_LEVEL');
+        if ($envLogLevel === false) {
+            return LogLevel::WARNING;
+        }
+        $constantName = __NAMESPACE__ . '\\LogLevel::' . strtoupper($envLogLevel);
+        return defined($constantName) ? constant($constantName) : LogLevel::WARNING;
     }
 
     /**
