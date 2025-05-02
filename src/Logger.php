@@ -1,6 +1,11 @@
 <?php
 namespace Antler\ErrorLogger;
 
+use DateTime;
+use ErrorException;
+use RuntimeException;
+use Throwable;
+
 class Logger
 {
     private static ?Logger $instance = null;
@@ -154,31 +159,32 @@ class Logger
     /**
      * Write to file
      */
-    private function writeToFile(string $formattedMessage): bool
+    private function writeToFile(string $formattedMessage): void
     {
         if (!$this->config->useFileLogging()) {
-            return false;
+            return;
         }
 
         try {
-            return (bool) file_put_contents(
+            (bool)file_put_contents(
                 $this->config->getLogFilePath(),
                 $formattedMessage . PHP_EOL,
                 FILE_APPEND | LOCK_EX
             );
+            return;
         } catch (Throwable $e) {
             $this->writeToErrorLog("Failed to write to log file: {$e->getMessage()}", LogLevel::ERROR);
-            return false;
+            return;
         }
     }
 
     /**
      * Send log to remote endpoint
      */
-    private function sendToRemote(int $level, string $message, array $context = []): bool
+    private function sendToRemote(int $level, string $message, array $context = []): void
     {
         if (!$this->config->useRemoteLogging()) {
-            return false;
+            return;
         }
 
         $payload = [
@@ -197,10 +203,11 @@ class Logger
 
         try {
             $jsonPayload = json_encode($payload, JSON_THROW_ON_ERROR);
-            return $this->sendViaCurl($jsonPayload) || $this->sendViaStream($jsonPayload);
+            $this->sendViaCurl($jsonPayload) || $this->sendViaStream($jsonPayload);
+            return;
         } catch (Throwable $e) {
             $this->writeToErrorLog("Error reporting failed: {$e->getMessage()}", LogLevel::ERROR);
-            return false;
+            return;
         }
     }
 
