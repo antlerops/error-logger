@@ -3,8 +3,9 @@
   "description": "Advanced error logger with multiple transport options and rate limiting",
   "type": "library",
   "require": {
-    "php": "^8.0",
-    "ext-curl": "*"
+    "php": "^7.1 || ^8.0",
+    "ext-curl": "*",
+    "ext-json": "*"
   },
   "autoload": {
     "psr-4": {

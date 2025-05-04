@@ -8,9 +8,9 @@ use Throwable;
 
 class Logger
 {
-    private static ?Logger $instance = null;
-    private LoggerConfig $config;
-    private array $logCounts = [];
+    private static $instance = null;
+    private $config;
+    private $logCounts = [];
 
     /**
      * Private constructor to enforce singleton pattern
@@ -34,10 +34,27 @@ class Logger
 
         // Create log directory if it doesn't exist and file logging is enabled
         if ($this->config->useFileLogging()) {
-            $logDir = dirname($this->config->getLogFilePath());
-            if (!is_dir($logDir)) {
-                mkdir($logDir, 0755, true);
+            $this->ensureLogDirectoryExists();
+        }
+    }
+
+    /**
+     * Create log directory if it doesn't exist
+     */
+    private function ensureLogDirectoryExists(): void
+    {
+        $logDir = dirname($this->config->getLogFilePath());
+        if (!is_dir($logDir)) {
+            $created = @mkdir($logDir, 0755, true);
+            if (!$created) {
+                // Log failure using error_log since file logging isn't available yet
+                error_log("Failed to create log directory: $logDir");
             }
+        }
+
+        // Check if the directory is writable
+        if (!is_writable($logDir)) {
+            error_log("Log directory is not writable: $logDir");
         }
     }
 
@@ -73,11 +90,13 @@ class Logger
         set_error_handler(function (int $severity, string $message, string $file, int $line): bool {
             if (!(error_reporting() & $severity)) return false;
 
-            $level = match($severity) {
-                E_NOTICE, E_USER_NOTICE => LogLevel::INFO,
-                E_WARNING, E_USER_WARNING, E_CORE_WARNING, E_COMPILE_WARNING => LogLevel::WARNING,
-                default => LogLevel::ERROR,
-            };
+            // PHP 7 compatible error level matching
+            $level = LogLevel::ERROR;
+            if ($severity === E_NOTICE || $severity === E_USER_NOTICE) {
+                $level = LogLevel::INFO;
+            } elseif (in_array($severity, [E_WARNING, E_USER_WARNING, E_CORE_WARNING, E_COMPILE_WARNING], true)) {
+                $level = LogLevel::WARNING;
+            }
 
             $this->log(
                 $level,
@@ -165,16 +184,23 @@ class Logger
             return;
         }
 
+        $logFilePath = $this->config->getLogFilePath();
+
         try {
-            (bool)file_put_contents(
-                $this->config->getLogFilePath(),
+            $result = file_put_contents(
+                $logFilePath,
                 $formattedMessage . PHP_EOL,
                 FILE_APPEND | LOCK_EX
             );
-            return;
+
+            if ($result === false) {
+                $this->writeToErrorLog(
+                    "Failed to write to log file: $logFilePath - Check permissions and disk space",
+                    LogLevel::ERROR
+                );
+            }
         } catch (Throwable $e) {
             $this->writeToErrorLog("Failed to write to log file: {$e->getMessage()}", LogLevel::ERROR);
-            return;
         }
     }
 
@@ -202,12 +228,15 @@ class Logger
         ];
 
         try {
-            $jsonPayload = json_encode($payload, JSON_THROW_ON_ERROR);
+            // PHP 7 compatible JSON encoding (no JSON_THROW_ON_ERROR)
+            $jsonPayload = json_encode($payload);
+            if ($jsonPayload === false) {
+                throw new RuntimeException('JSON encoding failed: ' . json_last_error_msg());
+            }
+
             $this->sendViaCurl($jsonPayload) || $this->sendViaStream($jsonPayload);
-            return;
         } catch (Throwable $e) {
             $this->writeToErrorLog("Error reporting failed: {$e->getMessage()}", LogLevel::ERROR);
-            return;
         }
     }
 

@@ -17,13 +17,20 @@ class LogLevel
      */
     public static function toString(int $level): string
     {
-        return match($level) {
-            self::DEBUG => 'DEBUG',
-            self::INFO => 'INFO',
-            self::WARNING => 'WARNING',
-            self::ERROR => 'ERROR',
-            self::CRITICAL => 'CRITICAL',
-            default => 'UNKNOWN',
-        };
+        // Replace match expression with traditional switch for PHP 7 compatibility
+        switch ($level) {
+            case self::DEBUG:
+                return 'DEBUG';
+            case self::INFO:
+                return 'INFO';
+            case self::WARNING:
+                return 'WARNING';
+            case self::ERROR:
+                return 'ERROR';
+            case self::CRITICAL:
+                return 'CRITICAL';
+            default:
+                return 'UNKNOWN';
+        }
     }
 }

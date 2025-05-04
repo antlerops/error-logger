@@ -3,15 +3,15 @@ namespace Antler\ErrorLogger;
 
 class LoggerConfig
 {
-    private string $remoteEndpoint;
-    private ?string $projectHash;
-    private int $requestTimeout;
-    private string $logFilePath;
-    private int $minLogLevel;
-    private bool $useRemoteLogging;
-    private bool $useFileLogging;
-    private bool $useErrorLog;
-    private int $rateLimitPerMinute;
+    private $remoteEndpoint;
+    private $projectHash;
+    private $requestTimeout;
+    private $logFilePath;
+    private $minLogLevel;
+    private $useRemoteLogging;
+    private $useFileLogging;
+    private $useErrorLog;
+    private $rateLimitPerMinute;
 
     /**
      * Constructor to initialize the logging configuration.
@@ -31,32 +31,16 @@ class LoggerConfig
      */
     public function __construct(array $config = [])
     {
-        // Log file path: ANTLER_LOG_FILE_PATH
-        $this->logFilePath = $config['log_file_path'] ?? getenv('ANTLER_LOG_FILE_PATH') ?: getcwd() . '/logs/application.log';
 
-        // Remote endpoint: ANTLER_LOG_ENDPOINT (existing)
-        $this->remoteEndpoint = $config['remote_endpoint'] ?? getenv('ANTLER_LOG_ENDPOINT') ?: null;
-
-        // Project hash: PROJECT_HASH (existing)
-        $this->projectHash = $config['project_hash'] ?? getenv('ANTLER_PROJECT_HASH') ?: null;
-
-        // Request timeout: ANTLER_LOG_REQUEST_TIMEOUT (parsed as int)
-        $this->requestTimeout = $config['request_timeout'] ?? (int)(getenv('ANTLER_LOG_REQUEST_TIMEOUT') ?: 2);
-
-        // Min log level: ANTLER_LOG_MIN_LOG_LEVEL (mapped to LogLevel constant)
-        $this->minLogLevel = $config['min_log_level'] ?? $this->getMinLogLevelFromEnv();
-
-        // Use remote logging: ANTLER_LOG_USE_REMOTE_LOGGING (parsed as bool)
-        $this->useRemoteLogging = $config['use_remote_logging'] ?? $this->getEnvBool('ANTLER_LOG_USE_REMOTE_LOGGING', true);
-
-        // Use file logging: ANTLER_LOG_USE_FILE_LOGGING (parsed as bool)
-        $this->useFileLogging = $config['use_file_logging'] ?? $this->getEnvBool('ANTLER_LOG_USE_FILE_LOGGING', true);
-
-        // Use error log: ANTLER_LOG_USE_ERROR_LOG (parsed as bool)
-        $this->useErrorLog = $config['use_error_log'] ?? $this->getEnvBool('ANTLER_LOG_USE_ERROR_LOG', true);
-
-        // Rate limit: ANTLER_LOG_RATE_LIMIT_PER_MINUTE (parsed as int)
-        $this->rateLimitPerMinute = $config['rate_limit_per_minute'] ?? (int)(getenv('ANTLER_LOG_RATE_LIMIT_PER_MINUTE') ?: 60);
+        $this->logFilePath = isset($config['log_file_path']) ? $config['log_file_path'] : (getenv('ANTLER_LOG_FILE_PATH') ?: getcwd() . '/logs/application.log');
+        $this->remoteEndpoint = isset($config['remote_endpoint']) ? $config['remote_endpoint'] : (getenv('ANTLER_LOG_ENDPOINT') ?: null);
+        $this->projectHash = isset($config['project_hash']) ? $config['project_hash'] : (getenv('ANTLER_PROJECT_HASH') ?: null);
+        $this->requestTimeout = isset($config['request_timeout']) ? $config['request_timeout'] : (int)(getenv('ANTLER_LOG_REQUEST_TIMEOUT') ?: 2);
+        $this->minLogLevel = isset($config['min_log_level']) ? $config['min_log_level'] : $this->getMinLogLevelFromEnv();
+        $this->useRemoteLogging = isset($config['use_remote_logging']) ? $config['use_remote_logging'] : $this->getEnvBool('ANTLER_LOG_USE_REMOTE_LOGGING', true);
+        $this->useFileLogging = isset($config['use_file_logging']) ? $config['use_file_logging'] : $this->getEnvBool('ANTLER_LOG_USE_FILE_LOGGING', true);
+        $this->useErrorLog = isset($config['use_error_log']) ? $config['use_error_log'] : $this->getEnvBool('ANTLER_LOG_USE_ERROR_LOG', true);
+        $this->rateLimitPerMinute = isset($config['rate_limit_per_minute']) ? $config['rate_limit_per_minute'] : (int)(getenv('ANTLER_LOG_RATE_LIMIT_PER_MINUTE') ?: 60);
     }
 
     /**
@@ -86,7 +70,7 @@ class LoggerConfig
      *
      * @return string The remote endpoint URL.
      */
-    public function getRemoteEndpoint(): string
+    public function getRemoteEndpoint(): ?string
     {
         return $this->remoteEndpoint;
     }

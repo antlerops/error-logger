@@ -1,6 +1,6 @@
 # Antler Error Logger
 
-Advanced PHP error logging system with multiple transports, rate limiting, and context support.
+Advanced PHP error logging system with multiple transports, rate limiting, and context support. Compatible with PHP 7.1+ and PHP 8.0+.
 
 ## Installation
 
@@ -120,6 +120,7 @@ LogLevel::WARNING  // 300
 LogLevel::ERROR    // 400
 LogLevel::CRITICAL // 500
 ```
+
 ## Advanced Setup
 
 ### Custom Configuration
@@ -146,6 +147,32 @@ try {
 }
 ```
 
+## Troubleshooting File Logging
+
+If you're experiencing issues with local file logging:
+
+1. **Check directory permissions**:
+   ```php
+   $logDir = dirname($logger->getConfig()->getLogFilePath());
+   echo "Directory exists: " . (is_dir($logDir) ? 'Yes' : 'No') . "\n";
+   echo "Directory is writable: " . (is_writable($logDir) ? 'Yes' : 'No') . "\n";
+   ```
+
+2. **Validate file path**:
+   Make sure the log file path is absolute or relative to the correct working directory.
+
+3. **Test with explicit path**:
+   ```php
+   $config = [
+       'project_hash' => 'test-project',
+       'log_file_path' => __DIR__ . '/logs/application.log',
+       'use_remote_logging' => false
+   ];
+   ```
+
+4. **Check PHP error log**:
+   If file logging fails, errors will be written to PHP's error_log if `use_error_log` is enabled.
+
 ## Log Format Example
 
 Local file entries include structured context:
@@ -167,7 +194,37 @@ Remote payloads include additional metadata:
 }
 ```
 
+## Testing the Logger
+
+A simple test script to verify your logger is working:
+
+```php
+<?php
+require_once 'vendor/autoload.php';
+
+use Antler\ErrorLogger\Logger;
+use Antler\ErrorLogger\LoggerConfig;
+use Antler\ErrorLogger\LogLevel;
+
+$config = [
+    'project_hash' => 'test-project-hash',
+    'log_file_path' => __DIR__ . '/logs/test.log',
+    'min_log_level' => LogLevel::DEBUG,
+    'use_remote_logging' => false,
+    'use_file_logging' => true
+];
+
+$logger = Logger::getInstance(new LoggerConfig($config));
+$logger->debug('Test message');
+
+if (file_exists(__DIR__ . '/logs/test.log')) {
+    echo "Success: Log file created!";
+} else {
+    echo "Error: Log file not created.";
+}
+```
+
 ## Requirements
 
-- PHP 8.0 or higher
+- PHP 7.1 or higher
 - Either cURL extension or `allow_url_fopen` enabled for remote logging
