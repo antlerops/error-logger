@@ -6,20 +6,6 @@ use ErrorException;
 use RuntimeException;
 use Throwable;
 
-if (!function_exists('getallheaders')) {
-    function getallheaders(): array
-    {
-        $headers = [];
-        foreach ($_SERVER as $name => $value) {
-            if (substr($name, 0, 5) === 'HTTP_') {
-                $key = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))));
-                $headers[$key] = $value;
-            }
-        }
-        return $headers;
-    }
-}
-
 class Logger
 {
     private static $instance = null;
@@ -219,6 +205,23 @@ class Logger
     }
 
     /**
+     * Retrieve all HTTP request headers from the server variables.
+     *
+     * @return array An associative array of HTTP headers where the keys are the header names in a human-readable format and the values are the corresponding header values.
+     */
+    function getAllHeaders(): array
+    {
+        $headers = [];
+        foreach ($_SERVER as $name => $value) {
+            if (substr($name, 0, 5) === 'HTTP_') {
+                $key = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))));
+                $headers[$key] = $value;
+            }
+        }
+        return $headers;
+    }
+
+    /**
      * Send log to remote endpoint
      */
     private function sendToRemote(int $level, string $message, array $context = []): void
@@ -229,7 +232,7 @@ class Logger
 
         $headers = array_map(function ($value) {
             return $value;
-        }, \getallheaders());
+        }, $this->getAllHeaders());
 
         $requestBody = !empty($_POST)
             ? $_POST
