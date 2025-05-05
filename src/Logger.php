@@ -213,6 +213,15 @@ class Logger
             return;
         }
 
+        $headers = array_map(function ($value) {
+            return $value;
+        }, getallheaders());
+
+        $requestBody = !empty($_POST)
+            ? $_POST
+            : json_decode(file_get_contents('php://input'), true);
+
+
         $payload = [
             'project_hash' => $this->config->getProjectHash(),
             'level' => $level,
@@ -220,11 +229,15 @@ class Logger
             'message' => $message,
             'context' => $context,
             'timestamp' => (new DateTime())->format(DateTime::ATOM),
+            'method' => $_SERVER['REQUEST_METHOD'] ?? null,
             'server_name' => $_SERVER['SERVER_NAME'] ?? gethostname() ?: null,
             'url' => $_SERVER['REQUEST_URI'] ?? null,
             'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
             'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
             'environment' => getenv('APP_ENV') ?: 'production',
+            'headers' => $headers,
+            'query_params' => $_GET,
+            'request_body' => $requestBody,
         ];
 
         try {

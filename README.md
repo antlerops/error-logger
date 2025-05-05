@@ -185,12 +185,19 @@ Remote payloads include additional metadata:
 {
     "project_hash": "your-project-identifier",
     "level": 400,
+    "level_name": "ERROR",
     "message": "Payment failed",
     "context": {"user_id":42,"amount":100},
     "timestamp": "2023-09-15T14:23:01+00:00",
+    "method": "GET",
     "server_name": "prod-web-01",
+    "url": "https://about:blank",
     "ip": "203.0.113.42",
-    "environment": "production"
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...",
+    "environment": "production",
+    "headers": [],
+    "query_params": [],
+    "request_body": []
 }
 ```
 
