@@ -229,7 +229,7 @@ class Logger
 
         $headers = array_map(function ($value) {
             return $value;
-        }, getallheaders());
+        }, \getallheaders());
 
         $requestBody = !empty($_POST)
             ? $_POST
