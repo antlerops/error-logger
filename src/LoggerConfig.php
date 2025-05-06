@@ -12,44 +12,98 @@ class LoggerConfig
     private $useFileLogging;
     private $useErrorLog;
     private $rateLimitPerMinute;
+    private $sensitiveKeyPatterns;
+    private $reportPHPInfo;
+    private $maxRequestBodySize;
 
     /**
      * Constructor to initialize the logging configuration.
      *
-     * @param array $config Associative array containing the configuration options:
-     *                      - 'log_file_path' (string): The path to the log file. Defaults to the current working directory with `/logs/application.log`.
-     *                      - 'remote_endpoint' (string|null): The remote logging endpoint. Defaults to the value of `ANTLER_LOG_ENDPOINT` environment variable or null.
-     *                      - 'project_hash' (string|null): The project hash for identification. Defaults to the value of `PROJECT_HASH` environment variable or null.
-     *                      - 'request_timeout' (int): The timeout for remote logging requests in seconds. Defaults to 2.
-     *                      - 'min_log_level' (string): The minimum log level to handle. Defaults to `LogLevel::WARNING`.
-     *                      - 'use_remote_logging' (bool): Whether to enable remote logging. Defaults to true.
-     *                      - 'use_file_logging' (bool): Whether to enable logging to a file. Defaults to true.
-     *                      - 'use_error_log' (bool): Whether to log to PHP error log. Defaults to true.
-     *                      - 'rate_limit_per_minute' (int): Number of log messages allowed per minute. Defaults to 60.
+     * @param array $config Associative array containing configuration options:
+     *                      - 'project_hash' (string|null): The project hash for identification. Required for logging.
+     *                      - 'remote_endpoint' (string|null): The remote logging endpoint. Required for remote logging.
+     *                      - 'request_timeout' (int): Timeout for remote logging requests in seconds. Default: 2.
+     *                      - 'log_file_path' (string): Path to the log file. Default: CWD + '/logs/application.log'.
+     *                      - 'min_log_level' (int): Minimum log level to handle. Default: LogLevel::WARNING.
+     *                      - 'use_remote_logging' (bool): Whether to enable remote logging. Default: true.
+     *                      - 'use_file_logging' (bool): Whether to enable logging to a file. Default: true.
+     *                      - 'use_error_log' (bool): Whether to log to PHP error log. Default: true.
+     *                      - 'rate_limit_per_minute' (int): Number of log messages allowed per minute. Default: 60.
+     *                      - 'sensitive_key_patterns' (array): Additional patterns to redact from logs. Default: [].
+     *                      - 'report_php_info' (bool): Whether to include detailed PHP configuration. Default: false.
+     *                      - 'max_request_body_size' (int): Maximum size in bytes to log for request bodies. Default: 10240.
      *
      * @return void
      */
     public function __construct(array $config = [])
     {
+        $this->projectHash = $this->getConfigValue($config, 'project_hash', 'ANTLER_PROJECT_HASH', null);
+        $this->remoteEndpoint = $this->getConfigValue($config, 'remote_endpoint', 'ANTLER_LOG_ENDPOINT', null);
+        $this->requestTimeout = (int)$this->getConfigValue($config, 'request_timeout', 'ANTLER_LOG_REQUEST_TIMEOUT', 2);
+        $this->logFilePath = $this->getConfigValue($config, 'log_file_path', 'ANTLER_LOG_FILE_PATH', getcwd() . '/logs/application.log');
+        $this->minLogLevel = $this->getConfigValue($config, 'min_log_level', null, null);
 
-        $this->logFilePath = isset($config['log_file_path']) ? $config['log_file_path'] : (getenv('ANTLER_LOG_FILE_PATH') ?: getcwd() . '/logs/application.log');
-        $this->remoteEndpoint = isset($config['remote_endpoint']) ? $config['remote_endpoint'] : (getenv('ANTLER_LOG_ENDPOINT') ?: null);
-        $this->projectHash = isset($config['project_hash']) ? $config['project_hash'] : (getenv('ANTLER_PROJECT_HASH') ?: null);
-        $this->requestTimeout = isset($config['request_timeout']) ? $config['request_timeout'] : (int)(getenv('ANTLER_LOG_REQUEST_TIMEOUT') ?: 2);
-        $this->minLogLevel = isset($config['min_log_level']) ? $config['min_log_level'] : $this->getMinLogLevelFromEnv();
-        $this->useRemoteLogging = isset($config['use_remote_logging']) ? $config['use_remote_logging'] : $this->getEnvBool('ANTLER_LOG_USE_REMOTE_LOGGING', true);
-        $this->useFileLogging = isset($config['use_file_logging']) ? $config['use_file_logging'] : $this->getEnvBool('ANTLER_LOG_USE_FILE_LOGGING', true);
-        $this->useErrorLog = isset($config['use_error_log']) ? $config['use_error_log'] : $this->getEnvBool('ANTLER_LOG_USE_ERROR_LOG', true);
-        $this->rateLimitPerMinute = isset($config['rate_limit_per_minute']) ? $config['rate_limit_per_minute'] : (int)(getenv('ANTLER_LOG_RATE_LIMIT_PER_MINUTE') ?: 60);
+        if ($this->minLogLevel === null) {
+            $this->minLogLevel = $this->getMinLogLevelFromEnv();
+        }
+
+        $this->useRemoteLogging = $this->getConfigBool($config, 'use_remote_logging', 'ANTLER_LOG_USE_REMOTE_LOGGING', true);
+        $this->useFileLogging = $this->getConfigBool($config, 'use_file_logging', 'ANTLER_LOG_USE_FILE_LOGGING', true);
+        $this->useErrorLog = $this->getConfigBool($config, 'use_error_log', 'ANTLER_LOG_USE_ERROR_LOG', true);
+        $this->rateLimitPerMinute = (int)$this->getConfigValue($config, 'rate_limit_per_minute', 'ANTLER_LOG_RATE_LIMIT_PER_MINUTE', 60);
+
+        // New configuration options
+        $this->sensitiveKeyPatterns = $config['sensitive_key_patterns'] ?? [];
+        $this->reportPHPInfo = $this->getConfigBool($config, 'report_php_info', 'ANTLER_LOG_REPORT_PHP_INFO', false);
+        $this->maxRequestBodySize = (int)$this->getConfigValue($config, 'max_request_body_size', 'ANTLER_LOG_MAX_REQUEST_BODY_SIZE', 10240);
     }
 
     /**
-     * Helper method to parse a boolean from an environment variable.
+     * Get a configuration value from array, environment, or default
+     *
+     * @param array $config The configuration array
+     * @param string $key The configuration key to look for
+     * @param string|null $envVar The environment variable name to check if key not in config
+     * @param mixed $default The default value if not found in config or env
+     * @return mixed The config value
      */
-    private function getEnvBool(string $envVar, bool $default): bool
+    private function getConfigValue(array $config, string $key, ?string $envVar, $default)
     {
-        $value = getenv($envVar);
-        return $value !== false ? filter_var($value, FILTER_VALIDATE_BOOLEAN) : $default;
+        if (isset($config[$key])) {
+            return $config[$key];
+        }
+
+        if ($envVar !== null) {
+            $envValue = getenv($envVar);
+            if ($envValue !== false) {
+                return $envValue;
+            }
+        }
+
+        return $default;
+    }
+
+    /**
+     * Get a boolean configuration value from array, environment, or default
+     *
+     * @param array $config The configuration array
+     * @param string $key The configuration key to look for
+     * @param string $envVar The environment variable name to check if key not in config
+     * @param bool $default The default value if not found in config or env
+     * @return bool The config value
+     */
+    private function getConfigBool(array $config, string $key, string $envVar, bool $default): bool
+    {
+        if (isset($config[$key])) {
+            return (bool)$config[$key];
+        }
+
+        $envValue = getenv($envVar);
+        if ($envValue !== false) {
+            return filter_var($envValue, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return $default;
     }
 
     /**
@@ -61,14 +115,37 @@ class LoggerConfig
         if ($envLogLevel === false) {
             return LogLevel::WARNING;
         }
-        $constantName = __NAMESPACE__ . '\\LogLevel::' . strtoupper($envLogLevel);
+
+        // Try to map string log level to constant
+        $levelMap = [
+            'DEBUG' => LogLevel::DEBUG,
+            'INFO' => LogLevel::INFO,
+            'WARNING' => LogLevel::WARNING,
+            'WARN' => LogLevel::WARNING,
+            'ERROR' => LogLevel::ERROR,
+            'CRITICAL' => LogLevel::CRITICAL,
+            'FATAL' => LogLevel::CRITICAL
+        ];
+
+        $upperLevel = strtoupper($envLogLevel);
+        if (isset($levelMap[$upperLevel])) {
+            return $levelMap[$upperLevel];
+        }
+
+        // If numeric value provided, use it directly
+        if (is_numeric($envLogLevel)) {
+            return (int)$envLogLevel;
+        }
+
+        // Try class constant as fallback
+        $constantName = __NAMESPACE__ . '\\LogLevel::' . $upperLevel;
         return defined($constantName) ? constant($constantName) : LogLevel::WARNING;
     }
 
     /**
-     * Retrieves the remote endpoint URL as a string.
+     * Get the remote endpoint URL.
      *
-     * @return string The remote endpoint URL.
+     * @return string|null The remote endpoint URL or null if not set.
      */
     public function getRemoteEndpoint(): ?string
     {
@@ -76,9 +153,9 @@ class LoggerConfig
     }
 
     /**
-     * Retrieves the hash value of the project.
+     * Get the project hash value.
      *
-     * @return string|null The hash of the project or null if not set.
+     * @return string|null The project hash or null if not set.
      */
     public function getProjectHash(): ?string
     {
@@ -86,9 +163,9 @@ class LoggerConfig
     }
 
     /**
-     * Retrieves the request timeout value.
+     * Get the request timeout value.
      *
-     * @return int The timeout duration for the request.
+     * @return int The timeout duration for remote requests in seconds.
      */
     public function getRequestTimeout(): int
     {
@@ -96,9 +173,9 @@ class LoggerConfig
     }
 
     /**
-     * Retrieves the path of the log file.
+     * Get the log file path.
      *
-     * @return string The file path of the log file.
+     * @return string The file path for local logging.
      */
     public function getLogFilePath(): string
     {
@@ -106,9 +183,9 @@ class LoggerConfig
     }
 
     /**
-     * Retrieves the minimum log level.
+     * Get the minimum log level.
      *
-     * @return int The minimum log level.
+     * @return int The minimum log level to process.
      */
     public function getMinLogLevel(): int
     {
@@ -116,7 +193,7 @@ class LoggerConfig
     }
 
     /**
-     * Determines if remote logging is enabled.
+     * Check if remote logging is enabled.
      *
      * @return bool True if remote logging is enabled, false otherwise.
      */
@@ -126,7 +203,7 @@ class LoggerConfig
     }
 
     /**
-     * Indicates if file logging is enabled.
+     * Check if file logging is enabled.
      *
      * @return bool True if file logging is enabled, false otherwise.
      */
@@ -136,9 +213,9 @@ class LoggerConfig
     }
 
     /**
-     * Indicates whether the error log is enabled.
+     * Check if PHP error log is enabled.
      *
-     * @return bool True if the error log is enabled, false otherwise.
+     * @return bool True if PHP error log is enabled, false otherwise.
      */
     public function useErrorLog(): bool
     {
@@ -146,12 +223,42 @@ class LoggerConfig
     }
 
     /**
-     * Retrieves the rate limit per minute.
+     * Get the rate limit per minute.
      *
-     * @return int The rate limit per minute.
+     * @return int The maximum number of log entries per minute.
      */
     public function getRateLimitPerMinute(): int
     {
         return $this->rateLimitPerMinute;
+    }
+
+    /**
+     * Get the sensitive key patterns to redact.
+     *
+     * @return array List of patterns to redact in addition to built-in ones.
+     */
+    public function getSensitiveKeyPatterns(): array
+    {
+        return $this->sensitiveKeyPatterns;
+    }
+
+    /**
+     * Whether to include detailed PHP configuration in logs.
+     *
+     * @return bool True if detailed PHP info should be included, false otherwise.
+     */
+    public function shouldReportPHPInfo(): bool
+    {
+        return $this->reportPHPInfo;
+    }
+
+    /**
+     * Get maximum size to log for request bodies in bytes.
+     *
+     * @return int Maximum size in bytes for request body logging.
+     */
+    public function getMaxRequestBodySize(): int
+    {
+        return $this->maxRequestBodySize;
     }
 }
