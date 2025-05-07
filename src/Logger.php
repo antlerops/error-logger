@@ -66,8 +66,11 @@ class Logger
 
     /**
      * Get singleton instance
+     *
+     * @param LoggerConfig|null $config Configuration for the logger
+     * @return self
      */
-    public static function getInstance(LoggerConfig $config = null): self
+    public static function getInstance(?LoggerConfig $config = null): self
     {
         if (self::$instance === null) {
             self::$instance = new self($config ?? new LoggerConfig());
@@ -124,7 +127,8 @@ class Logger
             $level = LogLevel::ERROR;
             if ($severity === E_NOTICE || $severity === E_USER_NOTICE || $severity === E_DEPRECATED || $severity === E_USER_DEPRECATED) {
                 $level = LogLevel::INFO;
-            } elseif (in_array($severity, [E_WARNING, E_USER_WARNING, E_CORE_WARNING, E_COMPILE_WARNING, E_STRICT], true)) {
+            } elseif (in_array($severity, [E_WARNING, E_USER_WARNING, E_CORE_WARNING, E_COMPILE_WARNING], true)) {
+                // Removed E_STRICT from this array
                 $level = LogLevel::WARNING;
             }
 
@@ -198,15 +202,20 @@ class Logger
             E_USER_ERROR => 'E_USER_ERROR',
             E_USER_WARNING => 'E_USER_WARNING',
             E_USER_NOTICE => 'E_USER_NOTICE',
-            E_STRICT => 'E_STRICT',
             E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
             E_DEPRECATED => 'E_DEPRECATED',
             E_USER_DEPRECATED => 'E_USER_DEPRECATED'
         ];
 
+        // Conditionally add E_STRICT for PHP 7 compatibility
+        if (defined('E_STRICT')) {
+            $errorTypes[E_STRICT] = 'E_STRICT';
+        }
+
         return $errorTypes[$type] ?? 'UNKNOWN_ERROR_TYPE';
     }
 
+    // Rest of the class remains unchanged...
     /**
      * Format bytes to human-readable string
      */
