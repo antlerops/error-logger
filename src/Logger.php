@@ -207,9 +207,12 @@ class Logger
             E_USER_DEPRECATED => 'E_USER_DEPRECATED'
         ];
 
-        // Conditionally add E_STRICT for PHP 7 compatibility
-        if (defined('E_STRICT')) {
+        if (PHP_VERSION_ID < 80000 && defined('E_STRICT')) {
             $errorTypes[E_STRICT] = 'E_STRICT';
+        } else if (PHP_VERSION_ID >= 80000) {
+            // For PHP 8+, add E_STRICT's value (32) with a different approach
+            // to avoid using the deprecated constant directly
+            $errorTypes[32] = 'E_STRICT';
         }
 
         return $errorTypes[$type] ?? 'UNKNOWN_ERROR_TYPE';
