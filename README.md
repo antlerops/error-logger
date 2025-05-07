@@ -5,6 +5,7 @@ An advanced PHP error logging system with comprehensive context capture, multipl
 ## Features
 
 - **Multi-Transport Logging**: Log to remote endpoints, local files, and PHP error log simultaneously
+- **Enhanced Stack Traces**: Captures source code context around errors with line numbers
 - **Intelligent Environment Detection**: Automatically captures different context in CLI vs. web environments
 - **Rich Context**: Captures system state, execution performance, HTTP request details, and more
 - **Privacy-Aware**: Automatically sanitizes sensitive data (passwords, tokens, etc.)
@@ -86,6 +87,20 @@ ANTLER_LOG_RATE_LIMIT_PER_MINUTE="100"
 
 Configuration in code overrides environment variables.
 
+## Enhanced Stack Traces with Code Context
+
+One of the powerful features of Antler Error Logger is the ability to capture detailed code context around errors. This makes debugging easier by showing you exactly what was happening in your code when the error occurred:
+
+```php
+try {
+    throw new Exception("Something went wrong");
+} catch (Exception $e) {
+    $logger->error("Caught exception", ["exception" => $e]);
+}
+```
+
+This will include the enhanced stack trace with source code context in your logs.
+
 ## Log Levels
 
 The logger offers five standard severity levels:
@@ -159,49 +174,9 @@ For example:
 }
 ```
 
-## Advanced Configuration Examples
-
-### Disable Remote Logging in Development
-
-```php
-// For local development, keep file logging but disable remote
-$logger = Logger::getInstance(new LoggerConfig([
-    'project_hash' => 'dev-project',
-    'use_remote_logging' => false,
-    'log_file_path' => __DIR__ . '/logs/dev.log',
-    'min_log_level' => LogLevel::DEBUG
-]));
-```
-
-### High-Traffic Production Environment
-
-```php
-// For high-traffic production, focus on performance
-$logger = Logger::getInstance(new LoggerConfig([
-    'project_hash' => 'prod-project',
-    'remote_endpoint' => 'https://logs.yourservice.com/api',
-    'min_log_level' => LogLevel::ERROR,
-    'use_file_logging' => false,       // Skip file logging for performance
-    'rate_limit_per_minute' => 200,    // Higher rate limit
-    'request_timeout' => 1             // Lower timeout to prevent blocking
-]));
-```
-
-### CLI Application Example
-
-```php
-// For CLI applications, customize log path by command
-$logger = Logger::getInstance(new LoggerConfig([
-    'project_hash' => 'cli-app',
-    'log_file_path' => __DIR__ . '/logs/' . basename($argv[0]) . '.log',
-    'use_remote_logging' => true,
-    'min_log_level' => LogLevel::INFO
-]));
-```
-
 ## Remote Payload Example
 
-Here's an example of what the logger sends to remote endpoints:
+Here's an example of what the logger sends to remote endpoints, including the enhanced stack trace:
 
 ```json
 {
@@ -211,8 +186,138 @@ Here's an example of what the logger sends to remote endpoints:
   "level_name": "ERROR",
   "message": "Database connection failed",
   "context": {
-    "host": "db.example.com",
-    "error_code": 1045
+    "exception_class": "PDOException",
+    "file": "/var/www/app/src/Database.php",
+    "line": 45,
+    "code": 1045,
+    "enhanced_trace": {
+      "frames": [
+        {
+          "file": "/var/www/app/src/Database.php",
+          "line": 45,
+          "function": null,
+          "class": null,
+          "type": null,
+          "args": [],
+          "code_context": {
+            "file": "/var/www/app/src/Database.php",
+            "line": 45,
+            "start_line": 40,
+            "end_line": 50,
+            "context": {
+              "40": {
+                "content": "    public function connect() {",
+                "is_error_line": false
+              },
+              "41": {
+                "content": "        try {",
+                "is_error_line": false
+              },
+              "42": {
+                "content": "            $dsn = sprintf(",
+                "is_error_line": false
+              },
+              "43": {
+                "content": "                'mysql:host=%s;dbname=%s;charset=utf8mb4',",
+                "is_error_line": false
+              },
+              "44": {
+                "content": "                $this->config['host'], $this->config['database']",
+                "is_error_line": false
+              },
+              "45": {
+                "content": "            $this->pdo = new PDO($dsn, $this->config['user'], $this->config['password']);",
+                "is_error_line": true
+              },
+              "46": {
+                "content": "            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);",
+                "is_error_line": false
+              },
+              "47": {
+                "content": "            return true;",
+                "is_error_line": false
+              },
+              "48": {
+                "content": "        } catch (PDOException $e) {",
+                "is_error_line": false
+              },
+              "49": {
+                "content": "            throw $e;",
+                "is_error_line": false
+              },
+              "50": {
+                "content": "        }",
+                "is_error_line": false
+              }
+            }
+          }
+        },
+        {
+          "file": "/var/www/app/src/App.php",
+          "line": 28,
+          "function": "connect",
+          "class": "Database",
+          "type": "->",
+          "args": [],
+          "code_context": {
+            "file": "/var/www/app/src/App.php",
+            "line": 28,
+            "start_line": 23,
+            "end_line": 33,
+            "context": {
+              "23": {
+                "content": "    public function initialize() {",
+                "is_error_line": false
+              },
+              "24": {
+                "content": "        // Load configuration",
+                "is_error_line": false
+              },
+              "25": {
+                "content": "        $this->config = require __DIR__ . '/../config/config.php';",
+                "is_error_line": false
+              },
+              "26": {
+                "content": "",
+                "is_error_line": false
+              },
+              "27": {
+                "content": "        // Initialize database",
+                "is_error_line": false
+              },
+              "28": {
+                "content": "        $this->db->connect();",
+                "is_error_line": true
+              },
+              "29": {
+                "content": "",
+                "is_error_line": false
+              },
+              "30": {
+                "content": "        // Set up routes",
+                "is_error_line": false
+              },
+              "31": {
+                "content": "        $this->setupRoutes();",
+                "is_error_line": false
+              },
+              "32": {
+                "content": "    }",
+                "is_error_line": false
+              },
+              "33": {
+                "content": "",
+                "is_error_line": false
+              }
+            }
+          }
+        }
+      ],
+      "exception_class": "PDOException",
+      "message": "SQLSTATE[HY000] [1045] Access denied for user 'webapp'@'172.18.0.3' (using password: YES)",
+      "code": 1045
+    },
+    "trace": "PDOException: SQLSTATE[HY000] [1045]... (truncated for brevity)"
   },
   "system": {
     "php_version": "8.1.12",
@@ -266,6 +371,46 @@ Here's an example of what the logger sends to remote endpoints:
 }
 ```
 
+## Advanced Configuration Examples
+
+### Development Environment
+
+```php
+// For local development, keep file logging but disable remote
+$logger = Logger::getInstance(new LoggerConfig([
+    'project_hash' => 'dev-project',
+    'use_remote_logging' => false,
+    'log_file_path' => __DIR__ . '/logs/dev.log',
+    'min_log_level' => LogLevel::DEBUG
+]));
+```
+
+### High-Traffic Production Environment
+
+```php
+// For high-traffic production, focus on performance
+$logger = Logger::getInstance(new LoggerConfig([
+    'project_hash' => 'prod-project',
+    'remote_endpoint' => 'https://logs.yourservice.com/api',
+    'min_log_level' => LogLevel::ERROR,
+    'use_file_logging' => false,       // Skip file logging for performance
+    'rate_limit_per_minute' => 200,    // Higher rate limit
+    'request_timeout' => 1             // Lower timeout to prevent blocking
+]));
+```
+
+### CLI Application Example
+
+```php
+// For CLI applications, customize log path by command
+$logger = Logger::getInstance(new LoggerConfig([
+    'project_hash' => 'cli-app',
+    'log_file_path' => __DIR__ . '/logs/' . basename($argv[0]) . '.log',
+    'use_remote_logging' => true,
+    'min_log_level' => LogLevel::INFO
+]));
+```
+
 ## Troubleshooting
 
 ### Remote Logging Not Working
@@ -308,7 +453,7 @@ The logger automatically registers handlers for:
 - PHP errors (via `set_error_handler`)
 - Fatal errors (via `register_shutdown_function`)
 
-These handlers capture detailed information about errors and send them through all configured transports.
+These handlers capture detailed information about errors, including the enhanced stack traces with code context, and send them through all configured transports.
 
 ## Contributing
 

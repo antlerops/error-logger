@@ -92,12 +92,17 @@ class Logger
     }
 
     /**
-     * Setup PHP error handlers
+     * Sets up custom error, exception, and shutdown handlers to log and manage application errors.
+     *
+     * @return void
      */
     private function setupErrorHandlers(): void
     {
         // Exception handler
         set_exception_handler(function (Throwable $e): void {
+            // Get enhanced stack trace with code context
+            $enhancedTrace = CodeFrame::enhancedTraceFromException($e);
+
             $this->critical(
                 $e->getMessage(),
                 [
@@ -105,7 +110,8 @@ class Logger
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                     'code' => $e->getCode(),
-                    'trace' => $e->getTraceAsString()
+                    'enhanced_trace' => $enhancedTrace,
+                    'trace' => $e->getTraceAsString() // Keep the original trace for backward compatibility
                 ]
             );
         });
@@ -122,6 +128,10 @@ class Logger
                 $level = LogLevel::WARNING;
             }
 
+            // Add code context for the error
+            $codeContext = CodeFrame::getContext($file, $line);
+            $enhancedTrace = CodeFrame::enhancedTraceFromError($file, $line, $message, $severity);
+
             $this->log(
                 $level,
                 $message,
@@ -130,6 +140,8 @@ class Logger
                     'error_severity' => $severity,
                     'file' => $file,
                     'line' => $line,
+                    'code_context' => $codeContext,
+                    'enhanced_trace' => $enhancedTrace,
                     'trace' => (new ErrorException($message, 0, $severity, $file, $line))->getTraceAsString()
                 ]
             );
@@ -141,6 +153,16 @@ class Logger
         register_shutdown_function(function (): void {
             $error = error_get_last();
             if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+                // Add code context for fatal errors if possible
+                $codeContext = CodeFrame::getContext($error['file'], $error['line']);
+                $enhancedTrace = null;
+
+                try {
+                    $enhancedTrace = CodeFrame::enhancedTraceFromError($error['file'], $error['line'], $error['message'], $error['type']);
+                } catch (Throwable $e) {
+                    // Cannot get enhanced trace, continue without it
+                }
+
                 $this->critical(
                     $error['message'],
                     [
@@ -148,6 +170,8 @@ class Logger
                         'error_severity' => $error['type'],
                         'file' => $error['file'],
                         'line' => $error['line'],
+                        'code_context' => $codeContext,
+                        'enhanced_trace' => $enhancedTrace,
                         'memory_usage' => $this->formatBytes(memory_get_usage(true)),
                         'memory_peak' => $this->formatBytes(memory_get_peak_usage(true)),
                         'execution_time' => round(microtime(true) - $this->startTime, 4) . 's'
