@@ -30,7 +30,7 @@ use Antler\ErrorLogger\LogLevel;
 // Quick setup with minimal configuration
 $config = new LoggerConfig([
     'project_hash' => 'your-project-identifier',
-    'remote_endpoint' => 'https://logs.yourservice.com/api'
+    'remote_endpoint' => 'LOCAL_DOMAIN/api/log/rec'
 ]);
 
 $logger = Logger::getInstance($config);
@@ -75,7 +75,7 @@ All configuration options can be set via environment variables:
 
 ```ini
 ANTLER_PROJECT_HASH="your-project-hash"
-ANTLER_LOG_ENDPOINT="https://logs.yourservice.com/api"
+ANTLER_LOG_ENDPOINT="LOCAL_DOMAIN/api/log/rec"
 ANTLER_LOG_FILE_PATH="/var/log/app.log"
 ANTLER_LOG_REQUEST_TIMEOUT="3"
 ANTLER_LOG_MIN_LOG_LEVEL="DEBUG"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -391,7 +391,7 @@ $logger = Logger::getInstance(new LoggerConfig([
 // For high-traffic production, focus on performance
 $logger = Logger::getInstance(new LoggerConfig([
     'project_hash' => 'prod-project',
-    'remote_endpoint' => 'https://logs.yourservice.com/api',
+    'remote_endpoint' => 'LOCAL_DOMAIN/api/log/rec',
     'min_log_level' => LogLevel::ERROR,
     'use_file_logging' => false,       // Skip file logging for performance
     'rate_limit_per_minute' => 200,    // Higher rate limit
@@ -410,6 +410,312 @@ $logger = Logger::getInstance(new LoggerConfig([
     'min_log_level' => LogLevel::INFO
 ]));
 ```
+
+## Laravel Integration
+
+Antler Error Logger integrates seamlessly with Laravel applications, providing enhanced error logging and monitoring for your Laravel projects.
+
+### Supported Laravel Versions
+
+Antler Error Logger is compatible with the following Laravel versions:
+
+| Laravel Version | PHP Compatibility | Support Status |
+|-----------------|-------------------|---------------|
+| Laravel 6.x     | PHP 7.2 or higher | ✓ Supported   |
+| Laravel 7.x     | PHP 7.2.5 or higher | ✓ Supported |
+| Laravel 8.x     | PHP 7.3 or higher | ✓ Supported   |
+| Laravel 9.x     | PHP 8.0.2 or higher | ✓ Supported |
+| Laravel 10.x    | PHP 8.1 or higher | ✓ Supported   |
+| Laravel 11.x    | PHP 8.2 or higher | ✓ Supported   |
+
+> **Note**: For PHP 7.1 compatibility, you must use Laravel 5.8 or earlier. Laravel 6.0+ requires PHP 7.2+.
+
+### Installation in Laravel
+
+1. Install the package via Composer:
+
+```bash
+composer require antlerops/error-logger
+```
+
+2. Publish the configuration file:
+
+```bash
+php artisan vendor:publish --provider="Antler\ErrorLogger\LaravelServiceProvider"
+```
+
+This will create a `config/antler-error-logger.php` configuration file in your application.
+
+### Laravel Service Provider
+
+When using Laravel, the package will automatically register its service provider if you're using Laravel's package auto-discovery. If auto-discovery is disabled, add the service provider manually to your `config/app.php` file:
+
+```php
+'providers' => [
+    // ...
+    Antler\ErrorLogger\LaravelServiceProvider::class,
+],
+```
+
+### Configuration in Laravel
+
+After publishing the configuration, you can modify the settings in the `config/antler-error-logger.php` file. The Laravel integration inherits all options from the standard configuration, with some Laravel-specific additions:
+
+```php
+return [
+    // Standard ErrorLogger options
+    'project_hash' => env('ANTLER_PROJECT_HASH', null),
+    'remote_endpoint' => env('ANTLER_LOG_ENDPOINT', null),
+    'use_remote_logging' => env('ANTLER_LOG_USE_REMOTE_LOGGING', true),
+    'use_file_logging' => env('ANTLER_LOG_USE_FILE_LOGGING', true),
+    'use_error_log' => env('ANTLER_LOG_USE_ERROR_LOG', true),
+    'log_file_path' => env('ANTLER_LOG_FILE_PATH', storage_path('logs/antler.log')),
+    'min_log_level' => env('ANTLER_LOG_MIN_LOG_LEVEL', \Antler\ErrorLogger\LogLevel::WARNING),
+    'rate_limit_per_minute' => env('ANTLER_LOG_RATE_LIMIT_PER_MINUTE', 60),
+    'request_timeout' => env('ANTLER_LOG_REQUEST_TIMEOUT', 2),
+
+    // Laravel-specific options
+    'register_exception_handler' => env('ANTLER_REGISTER_EXCEPTION_HANDLER', true),
+    'log_queries' => env('ANTLER_LOG_QUERIES', false),
+    'log_queue_failures' => env('ANTLER_LOG_QUEUE_FAILURES', true),
+    'log_scheduled_task_failures' => env('ANTLER_LOG_SCHEDULED_TASK_FAILURES', true),
+    'capture_laravel_context' => env('ANTLER_CAPTURE_LARAVEL_CONTEXT', true),
+];
+```
+
+### Integration with Laravel's Logging System
+
+The package can integrate with Laravel's built-in logging system by adding a custom channel to your `config/logging.php` file:
+
+```php
+'channels' => [
+    // Other channels...
+    
+    'antler' => [
+        'driver' => 'custom',
+        'via' => \Antler\ErrorLogger\LaravelLoggerFactory::class,
+        'level' => env('ANTLER_LOG_LEVEL', 'warning'),
+    ],
+],
+```
+
+You can then use this channel in your application:
+
+```php
+Log::channel('antler')->error('Something went wrong', ['context' => 'additional information']);
+```
+
+Or set it as your default channel in `.env`:
+
+```
+LOG_CHANNEL=antler
+```
+
+### Usage with Laravel
+
+#### Basic Usage
+
+Once installed, the logger will automatically capture exceptions thrown in your Laravel application. You can also use it manually:
+
+```php
+use Antler\ErrorLogger\Facades\Logger;
+
+// In any controller or service
+Logger::error('Payment failed', ['order_id' => $orderId, 'amount' => $amount]);
+```
+
+#### Handling Exceptions
+
+The package registers an exception handler to capture all uncaught exceptions in your Laravel application. If you have custom exception handling, you can integrate it:
+
+```php
+// In app/Exceptions/Handler.php
+public function report(Throwable $exception)
+{
+    // Let Antler ErrorLogger handle the exception first
+    app('antler-error-logger')->error('Uncaught exception', [
+        'exception' => $exception,
+    ]);
+    
+    // Then continue with parent reporting
+    parent::report($exception);
+}
+```
+
+#### Logging Queries (For Performance Monitoring)
+
+If you enable the `log_queries` option, the package will log slow database queries:
+
+```php
+// In .env
+ANTLER_LOG_QUERIES=true
+ANTLER_SLOW_QUERY_THRESHOLD=1000 # in milliseconds
+```
+
+#### Queue Job Failures
+
+When `log_queue_failures` is enabled, the package will automatically log failed queue jobs with detailed context.
+
+#### Scheduled Task Failures
+
+With `log_scheduled_task_failures` enabled, the package will log any failures in your scheduled tasks.
+
+### Laravel-Specific Context
+
+In addition to the standard context captured by Antler Error Logger, the Laravel integration also captures:
+
+- Current route information
+- Controller and action names
+- Active middleware
+- Current authenticated user (ID, email - no passwords/tokens)
+- Laravel version
+- Application environment (local, production, etc.)
+- Configuration settings (sensitive values redacted)
+
+### Examples in Laravel
+
+#### Logging in a Controller
+
+```php
+namespace App\Http\Controllers;
+
+use Antler\ErrorLogger\Facades\Logger;
+use App\Models\Order;
+use Exception;
+
+class OrderController extends Controller
+{
+    public function process($id)
+    {
+        try {
+            $order = Order::findOrFail($id);
+            
+            // Process order...
+            
+            Logger::info('Order processed successfully', [
+                'order_id' => $order->id,
+                'amount' => $order->amount,
+            ]);
+            
+            return response()->json(['status' => 'success']);
+        } catch (Exception $e) {
+            Logger::error('Order processing failed', [
+                'order_id' => $id,
+                'exception' => $e,
+            ]);
+            
+            return response()->json(['status' => 'error'], 500);
+        }
+    }
+}
+```
+
+#### Logging in a Queue Job
+
+```php
+namespace App\Jobs;
+
+use Antler\ErrorLogger\Facades\Logger;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+
+class ProcessPodcast implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    protected $podcastId;
+
+    public function __construct($podcastId)
+    {
+        $this->podcastId = $podcastId;
+    }
+
+    public function handle()
+    {
+        // Process the podcast...
+        
+        Logger::info('Podcast processed', [
+            'podcast_id' => $this->podcastId,
+            'processing_time' => $executionTime,
+        ]);
+    }
+
+    public function failed($exception)
+    {
+        Logger::error('Podcast processing failed', [
+            'podcast_id' => $this->podcastId,
+            'exception' => $exception,
+        ]);
+    }
+}
+```
+
+### Version-Specific Notes for Laravel
+
+#### Laravel 6.x (PHP 7.2+)
+
+Laravel 6.x introduced semantic versioning, but dropped support for PHP 7.1. When using with Laravel 6.x, ensure you're running PHP 7.2 or higher.
+
+#### Laravel 7.x (PHP 7.2.5+)
+
+PHP 7.2.5 is the minimum requirement for Laravel 7.x. This version works well with the error logger with no special considerations.
+
+#### Laravel 8.x (PHP 7.3+)
+
+Laravel 8.x requires PHP 7.3 or higher. When using with Laravel 8.x, note that model factories changed to a class-based system, which may affect error context collection.
+
+#### Laravel 9.x+ (PHP 8.0.2+)
+
+Laravel 9.x and above require PHP 8.0.2 or higher and include many PHP 8 features. The error logger automatically detects and adapts to PHP 8-specific features like attributes, union types, and named arguments.
+
+### Performance Considerations in Laravel
+
+To minimize performance impact in Laravel, consider these settings:
+
+```php
+// Only in production environments
+if (app()->environment('production')) {
+    // Set more conservative rate limiting
+    config(['antler-error-logger.rate_limit_per_minute' => 30]);
+    
+    // Disable query logging in production
+    config(['antler-error-logger.log_queries' => false]);
+    
+    // Use non-blocking logging where possible
+    config(['antler-error-logger.request_timeout' => 1]);
+}
+```
+
+### Troubleshooting in Laravel Environments
+
+#### Common Issues in Laravel Environments
+
+1. **Permissions issues with log files:**
+   Make sure the storage directory is writable by your web server.
+
+   ```bash
+   chmod -R 775 storage/logs
+   chown -R www-data:www-data storage/logs
+   ```
+
+2. **Memory usage in large applications:**
+   For Laravel apps with many dependencies, watch memory usage during error processing:
+
+   ```php
+   // In config/antler-error-logger.php
+   'collect_all_packages' => env('ANTLER_COLLECT_ALL_PACKAGES', false),
+   ```
+
+3. **Excessive logging from scheduler:**
+   If you run Laravel scheduler frequently, you may want to adjust settings:
+
+   ```php
+   // In config/antler-error-logger.php
+   'log_scheduled_task_output' => env('ANTLER_LOG_SCHEDULED_TASK_OUTPUT', false),
+   ```
 
 ## Troubleshooting
 
