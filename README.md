@@ -165,12 +165,12 @@ The logger automatically redacts sensitive information from request data. Fields
 For example:
 ```json
 {
-   "user": "johndoe",
-   "api_key": "[REDACTED]",
-   "password": "[REDACTED]",
-   "metadata": {
-      "access_token": "[REDACTED]"
-   }
+    "user": "johndoe",
+    "api_key": "[REDACTED]",
+    "password": "[REDACTED]",
+    "metadata": {
+        "access_token": "[REDACTED]"
+    }
 }
 ```
 
@@ -180,194 +180,194 @@ Here's an example of what the logger sends to remote endpoints, including the en
 
 ```json
 {
-   "project_hash": "example-project",
-   "timestamp": "2023-09-15T14:23:01+00:00",
-   "level": 400,
-   "level_name": "ERROR",
-   "message": "Database connection failed",
-   "context": {
-      "exception_class": "PDOException",
-      "file": "/var/www/app/src/Database.php",
-      "line": 45,
-      "code": 1045,
-      "enhanced_trace": {
-         "frames": [
-            {
-               "file": "/var/www/app/src/Database.php",
-               "line": 45,
-               "function": null,
-               "class": null,
-               "type": null,
-               "args": [],
-               "code_context": {
-                  "file": "/var/www/app/src/Database.php",
-                  "line": 45,
-                  "start_line": 40,
-                  "end_line": 50,
-                  "context": {
-                     "40": {
-                        "content": "    public function connect() {",
-                        "is_error_line": false
-                     },
-                     "41": {
-                        "content": "        try {",
-                        "is_error_line": false
-                     },
-                     "42": {
-                        "content": "            $dsn = sprintf(",
-                        "is_error_line": false
-                     },
-                     "43": {
-                        "content": "                'mysql:host=%s;dbname=%s;charset=utf8mb4',",
-                        "is_error_line": false
-                     },
-                     "44": {
-                        "content": "                $this->config['host'], $this->config['database']",
-                        "is_error_line": false
-                     },
-                     "45": {
-                        "content": "            $this->pdo = new PDO($dsn, $this->config['user'], $this->config['password']);",
-                        "is_error_line": true
-                     },
-                     "46": {
-                        "content": "            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);",
-                        "is_error_line": false
-                     },
-                     "47": {
-                        "content": "            return true;",
-                        "is_error_line": false
-                     },
-                     "48": {
-                        "content": "        } catch (PDOException $e) {",
-                        "is_error_line": false
-                     },
-                     "49": {
-                        "content": "            throw $e;",
-                        "is_error_line": false
-                     },
-                     "50": {
-                        "content": "        }",
-                        "is_error_line": false
-                     }
-                  }
-               }
-            },
-            {
-               "file": "/var/www/app/src/App.php",
-               "line": 28,
-               "function": "connect",
-               "class": "Database",
-               "type": "->",
-               "args": [],
-               "code_context": {
-                  "file": "/var/www/app/src/App.php",
-                  "line": 28,
-                  "start_line": 23,
-                  "end_line": 33,
-                  "context": {
-                     "23": {
-                        "content": "    public function initialize() {",
-                        "is_error_line": false
-                     },
-                     "24": {
-                        "content": "        // Load configuration",
-                        "is_error_line": false
-                     },
-                     "25": {
-                        "content": "        $this->config = require __DIR__ . '/../config/config.php';",
-                        "is_error_line": false
-                     },
-                     "26": {
-                        "content": "",
-                        "is_error_line": false
-                     },
-                     "27": {
-                        "content": "        // Initialize database",
-                        "is_error_line": false
-                     },
-                     "28": {
-                        "content": "        $this->db->connect();",
-                        "is_error_line": true
-                     },
-                     "29": {
-                        "content": "",
-                        "is_error_line": false
-                     },
-                     "30": {
-                        "content": "        // Set up routes",
-                        "is_error_line": false
-                     },
-                     "31": {
-                        "content": "        $this->setupRoutes();",
-                        "is_error_line": false
-                     },
-                     "32": {
-                        "content": "    }",
-                        "is_error_line": false
-                     },
-                     "33": {
-                        "content": "",
-                        "is_error_line": false
-                     }
-                  }
-               }
+  "project_hash": "example-project",
+  "timestamp": "2023-09-15T14:23:01+00:00",
+  "level": 400,
+  "level_name": "ERROR",
+  "message": "Database connection failed",
+  "context": {
+    "exception_class": "PDOException",
+    "file": "/var/www/app/src/Database.php",
+    "line": 45,
+    "code": 1045,
+    "enhanced_trace": {
+      "frames": [
+        {
+          "file": "/var/www/app/src/Database.php",
+          "line": 45,
+          "function": null,
+          "class": null,
+          "type": null,
+          "args": [],
+          "code_context": {
+            "file": "/var/www/app/src/Database.php",
+            "line": 45,
+            "start_line": 40,
+            "end_line": 50,
+            "context": {
+              "40": {
+                "content": "    public function connect() {",
+                "is_error_line": false
+              },
+              "41": {
+                "content": "        try {",
+                "is_error_line": false
+              },
+              "42": {
+                "content": "            $dsn = sprintf(",
+                "is_error_line": false
+              },
+              "43": {
+                "content": "                'mysql:host=%s;dbname=%s;charset=utf8mb4',",
+                "is_error_line": false
+              },
+              "44": {
+                "content": "                $this->config['host'], $this->config['database']",
+                "is_error_line": false
+              },
+              "45": {
+                "content": "            $this->pdo = new PDO($dsn, $this->config['user'], $this->config['password']);",
+                "is_error_line": true
+              },
+              "46": {
+                "content": "            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);",
+                "is_error_line": false
+              },
+              "47": {
+                "content": "            return true;",
+                "is_error_line": false
+              },
+              "48": {
+                "content": "        } catch (PDOException $e) {",
+                "is_error_line": false
+              },
+              "49": {
+                "content": "            throw $e;",
+                "is_error_line": false
+              },
+              "50": {
+                "content": "        }",
+                "is_error_line": false
+              }
             }
-         ],
-         "exception_class": "PDOException",
-         "message": "SQLSTATE[HY000] [1045] Access denied for user 'webapp'@'172.18.0.3' (using password: YES)",
-         "code": 1045
-      },
-      "trace": "PDOException: SQLSTATE[HY000] [1045]... (truncated for brevity)"
-   },
-   "system": {
-      "php_version": "8.1.12",
-      "os": "Linux",
-      "memory_usage": "14.2 MB",
-      "memory_peak": "16.5 MB",
-      "memory_growth": "7.5 MB",
-      "memory_limit": "128M",
-      "execution_time": "0.1234s",
-      "max_execution_time": "30",
-      "timezone": "UTC",
-      "sapi": "fpm-fcgi",
-      "server_software": "nginx/1.20.1"
-   },
-   "environment": {
-      "environment": "production",
-      "server_name": "web-prod-03",
-      "process_id": 12345,
-      "container": true
-   },
-   "web": {
-      "method": "POST",
-      "url": "https://api.example.com/users",
-      "path": "/users",
-      "query_string": "source=signup",
-      "ip": "203.0.113.42",
-      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      "referer": "https://example.com/signup",
-      "protocol": "HTTP/1.1",
-      "port": "443",
-      "host": "api.example.com",
-      "https": true,
-      "query_params": {
-         "source": "signup"
-      }
-   },
-   "headers": {
-      "Accept": "application/json",
-      "Content-Type": "application/json",
-      "Authorization": "[REDACTED]"
-   },
-   "request_body": {
-      "name": "John Doe",
-      "email": "john@example.com",
-      "password": "[REDACTED]"
-   },
-   "session": {
-      "id": "abc123def456",
-      "data_size": "2.3 KB"
-   }
+          }
+        },
+        {
+          "file": "/var/www/app/src/App.php",
+          "line": 28,
+          "function": "connect",
+          "class": "Database",
+          "type": "->",
+          "args": [],
+          "code_context": {
+            "file": "/var/www/app/src/App.php",
+            "line": 28,
+            "start_line": 23,
+            "end_line": 33,
+            "context": {
+              "23": {
+                "content": "    public function initialize() {",
+                "is_error_line": false
+              },
+              "24": {
+                "content": "        // Load configuration",
+                "is_error_line": false
+              },
+              "25": {
+                "content": "        $this->config = require __DIR__ . '/../config/config.php';",
+                "is_error_line": false
+              },
+              "26": {
+                "content": "",
+                "is_error_line": false
+              },
+              "27": {
+                "content": "        // Initialize database",
+                "is_error_line": false
+              },
+              "28": {
+                "content": "        $this->db->connect();",
+                "is_error_line": true
+              },
+              "29": {
+                "content": "",
+                "is_error_line": false
+              },
+              "30": {
+                "content": "        // Set up routes",
+                "is_error_line": false
+              },
+              "31": {
+                "content": "        $this->setupRoutes();",
+                "is_error_line": false
+              },
+              "32": {
+                "content": "    }",
+                "is_error_line": false
+              },
+              "33": {
+                "content": "",
+                "is_error_line": false
+              }
+            }
+          }
+        }
+      ],
+      "exception_class": "PDOException",
+      "message": "SQLSTATE[HY000] [1045] Access denied for user 'webapp'@'172.18.0.3' (using password: YES)",
+      "code": 1045
+    },
+    "trace": "PDOException: SQLSTATE[HY000] [1045]... (truncated for brevity)"
+  },
+  "system": {
+    "php_version": "8.1.12",
+    "os": "Linux",
+    "memory_usage": "14.2 MB",
+    "memory_peak": "16.5 MB",
+    "memory_growth": "7.5 MB",
+    "memory_limit": "128M",
+    "execution_time": "0.1234s",
+    "max_execution_time": "30",
+    "timezone": "UTC",
+    "sapi": "fpm-fcgi",
+    "server_software": "nginx/1.20.1"
+  },
+  "environment": {
+    "environment": "production",
+    "server_name": "web-prod-03",
+    "process_id": 12345,
+    "container": true
+  },
+  "web": {
+    "method": "POST",
+    "url": "https://api.example.com/users",
+    "path": "/users",
+    "query_string": "source=signup",
+    "ip": "203.0.113.42",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "referer": "https://example.com/signup",
+    "protocol": "HTTP/1.1",
+    "port": "443",
+    "host": "api.example.com",
+    "https": true,
+    "query_params": {
+      "source": "signup"
+    }
+  },
+  "headers": {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "Authorization": "[REDACTED]"
+  },
+  "request_body": {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "[REDACTED]"
+  },
+  "session": {
+    "id": "abc123def456",
+    "data_size": "2.3 KB"
+  }
 }
 ```
 
@@ -427,6 +427,7 @@ Antler Error Logger is compatible with the following Laravel versions:
 | Laravel 9.x     | PHP 8.0.2 or higher | ✓ Supported |
 | Laravel 10.x    | PHP 8.1 or higher | ✓ Supported   |
 | Laravel 11.x    | PHP 8.2 or higher | ✓ Supported   |
+| Laravel 12.x    | PHP 8.2 or higher | ✓ Supported   |
 
 > **Note**: For PHP 7.1 compatibility, you must use Laravel 5.8 or earlier. Laravel 6.0+ requires PHP 7.2+.
 
