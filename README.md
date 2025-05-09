@@ -165,12 +165,12 @@ The logger automatically redacts sensitive information from request data. Fields
 For example:
 ```json
 {
-  "user": "johndoe",
-  "api_key": "[REDACTED]",
-  "password": "[REDACTED]",
-  "metadata": {
-    "access_token": "[REDACTED]"
-  }
+   "user": "johndoe",
+   "api_key": "[REDACTED]",
+   "password": "[REDACTED]",
+   "metadata": {
+      "access_token": "[REDACTED]"
+   }
 }
 ```
 
@@ -180,194 +180,194 @@ Here's an example of what the logger sends to remote endpoints, including the en
 
 ```json
 {
-  "project_hash": "example-project",
-  "timestamp": "2023-09-15T14:23:01+00:00",
-  "level": 400,
-  "level_name": "ERROR",
-  "message": "Database connection failed",
-  "context": {
-    "exception_class": "PDOException",
-    "file": "/var/www/app/src/Database.php",
-    "line": 45,
-    "code": 1045,
-    "enhanced_trace": {
-      "frames": [
-        {
-          "file": "/var/www/app/src/Database.php",
-          "line": 45,
-          "function": null,
-          "class": null,
-          "type": null,
-          "args": [],
-          "code_context": {
-            "file": "/var/www/app/src/Database.php",
-            "line": 45,
-            "start_line": 40,
-            "end_line": 50,
-            "context": {
-              "40": {
-                "content": "    public function connect() {",
-                "is_error_line": false
-              },
-              "41": {
-                "content": "        try {",
-                "is_error_line": false
-              },
-              "42": {
-                "content": "            $dsn = sprintf(",
-                "is_error_line": false
-              },
-              "43": {
-                "content": "                'mysql:host=%s;dbname=%s;charset=utf8mb4',",
-                "is_error_line": false
-              },
-              "44": {
-                "content": "                $this->config['host'], $this->config['database']",
-                "is_error_line": false
-              },
-              "45": {
-                "content": "            $this->pdo = new PDO($dsn, $this->config['user'], $this->config['password']);",
-                "is_error_line": true
-              },
-              "46": {
-                "content": "            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);",
-                "is_error_line": false
-              },
-              "47": {
-                "content": "            return true;",
-                "is_error_line": false
-              },
-              "48": {
-                "content": "        } catch (PDOException $e) {",
-                "is_error_line": false
-              },
-              "49": {
-                "content": "            throw $e;",
-                "is_error_line": false
-              },
-              "50": {
-                "content": "        }",
-                "is_error_line": false
-              }
-            }
-          }
-        },
-        {
-          "file": "/var/www/app/src/App.php",
-          "line": 28,
-          "function": "connect",
-          "class": "Database",
-          "type": "->",
-          "args": [],
-          "code_context": {
-            "file": "/var/www/app/src/App.php",
-            "line": 28,
-            "start_line": 23,
-            "end_line": 33,
-            "context": {
-              "23": {
-                "content": "    public function initialize() {",
-                "is_error_line": false
-              },
-              "24": {
-                "content": "        // Load configuration",
-                "is_error_line": false
-              },
-              "25": {
-                "content": "        $this->config = require __DIR__ . '/../config/config.php';",
-                "is_error_line": false
-              },
-              "26": {
-                "content": "",
-                "is_error_line": false
-              },
-              "27": {
-                "content": "        // Initialize database",
-                "is_error_line": false
-              },
-              "28": {
-                "content": "        $this->db->connect();",
-                "is_error_line": true
-              },
-              "29": {
-                "content": "",
-                "is_error_line": false
-              },
-              "30": {
-                "content": "        // Set up routes",
-                "is_error_line": false
-              },
-              "31": {
-                "content": "        $this->setupRoutes();",
-                "is_error_line": false
-              },
-              "32": {
-                "content": "    }",
-                "is_error_line": false
-              },
-              "33": {
-                "content": "",
-                "is_error_line": false
-              }
-            }
-          }
-        }
-      ],
+   "project_hash": "example-project",
+   "timestamp": "2023-09-15T14:23:01+00:00",
+   "level": 400,
+   "level_name": "ERROR",
+   "message": "Database connection failed",
+   "context": {
       "exception_class": "PDOException",
-      "message": "SQLSTATE[HY000] [1045] Access denied for user 'webapp'@'172.18.0.3' (using password: YES)",
-      "code": 1045
-    },
-    "trace": "PDOException: SQLSTATE[HY000] [1045]... (truncated for brevity)"
-  },
-  "system": {
-    "php_version": "8.1.12",
-    "os": "Linux",
-    "memory_usage": "14.2 MB",
-    "memory_peak": "16.5 MB",
-    "memory_growth": "7.5 MB",
-    "memory_limit": "128M",
-    "execution_time": "0.1234s",
-    "max_execution_time": "30",
-    "timezone": "UTC",
-    "sapi": "fpm-fcgi",
-    "server_software": "nginx/1.20.1"
-  },
-  "environment": {
-    "environment": "production",
-    "server_name": "web-prod-03",
-    "process_id": 12345,
-    "container": true
-  },
-  "web": {
-    "method": "POST",
-    "url": "https://api.example.com/users",
-    "path": "/users",
-    "query_string": "source=signup",
-    "ip": "203.0.113.42",
-    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "referer": "https://example.com/signup",
-    "protocol": "HTTP/1.1",
-    "port": "443",
-    "host": "api.example.com",
-    "https": true,
-    "query_params": {
-      "source": "signup"
-    }
-  },
-  "headers": {
-    "Accept": "application/json",
-    "Content-Type": "application/json",
-    "Authorization": "[REDACTED]"
-  },
-  "request_body": {
-    "name": "John Doe",
-    "email": "john@example.com",
-    "password": "[REDACTED]"
-  },
-  "session": {
-    "id": "abc123def456",
-    "data_size": "2.3 KB"
-  }
+      "file": "/var/www/app/src/Database.php",
+      "line": 45,
+      "code": 1045,
+      "enhanced_trace": {
+         "frames": [
+            {
+               "file": "/var/www/app/src/Database.php",
+               "line": 45,
+               "function": null,
+               "class": null,
+               "type": null,
+               "args": [],
+               "code_context": {
+                  "file": "/var/www/app/src/Database.php",
+                  "line": 45,
+                  "start_line": 40,
+                  "end_line": 50,
+                  "context": {
+                     "40": {
+                        "content": "    public function connect() {",
+                        "is_error_line": false
+                     },
+                     "41": {
+                        "content": "        try {",
+                        "is_error_line": false
+                     },
+                     "42": {
+                        "content": "            $dsn = sprintf(",
+                        "is_error_line": false
+                     },
+                     "43": {
+                        "content": "                'mysql:host=%s;dbname=%s;charset=utf8mb4',",
+                        "is_error_line": false
+                     },
+                     "44": {
+                        "content": "                $this->config['host'], $this->config['database']",
+                        "is_error_line": false
+                     },
+                     "45": {
+                        "content": "            $this->pdo = new PDO($dsn, $this->config['user'], $this->config['password']);",
+                        "is_error_line": true
+                     },
+                     "46": {
+                        "content": "            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);",
+                        "is_error_line": false
+                     },
+                     "47": {
+                        "content": "            return true;",
+                        "is_error_line": false
+                     },
+                     "48": {
+                        "content": "        } catch (PDOException $e) {",
+                        "is_error_line": false
+                     },
+                     "49": {
+                        "content": "            throw $e;",
+                        "is_error_line": false
+                     },
+                     "50": {
+                        "content": "        }",
+                        "is_error_line": false
+                     }
+                  }
+               }
+            },
+            {
+               "file": "/var/www/app/src/App.php",
+               "line": 28,
+               "function": "connect",
+               "class": "Database",
+               "type": "->",
+               "args": [],
+               "code_context": {
+                  "file": "/var/www/app/src/App.php",
+                  "line": 28,
+                  "start_line": 23,
+                  "end_line": 33,
+                  "context": {
+                     "23": {
+                        "content": "    public function initialize() {",
+                        "is_error_line": false
+                     },
+                     "24": {
+                        "content": "        // Load configuration",
+                        "is_error_line": false
+                     },
+                     "25": {
+                        "content": "        $this->config = require __DIR__ . '/../config/config.php';",
+                        "is_error_line": false
+                     },
+                     "26": {
+                        "content": "",
+                        "is_error_line": false
+                     },
+                     "27": {
+                        "content": "        // Initialize database",
+                        "is_error_line": false
+                     },
+                     "28": {
+                        "content": "        $this->db->connect();",
+                        "is_error_line": true
+                     },
+                     "29": {
+                        "content": "",
+                        "is_error_line": false
+                     },
+                     "30": {
+                        "content": "        // Set up routes",
+                        "is_error_line": false
+                     },
+                     "31": {
+                        "content": "        $this->setupRoutes();",
+                        "is_error_line": false
+                     },
+                     "32": {
+                        "content": "    }",
+                        "is_error_line": false
+                     },
+                     "33": {
+                        "content": "",
+                        "is_error_line": false
+                     }
+                  }
+               }
+            }
+         ],
+         "exception_class": "PDOException",
+         "message": "SQLSTATE[HY000] [1045] Access denied for user 'webapp'@'172.18.0.3' (using password: YES)",
+         "code": 1045
+      },
+      "trace": "PDOException: SQLSTATE[HY000] [1045]... (truncated for brevity)"
+   },
+   "system": {
+      "php_version": "8.1.12",
+      "os": "Linux",
+      "memory_usage": "14.2 MB",
+      "memory_peak": "16.5 MB",
+      "memory_growth": "7.5 MB",
+      "memory_limit": "128M",
+      "execution_time": "0.1234s",
+      "max_execution_time": "30",
+      "timezone": "UTC",
+      "sapi": "fpm-fcgi",
+      "server_software": "nginx/1.20.1"
+   },
+   "environment": {
+      "environment": "production",
+      "server_name": "web-prod-03",
+      "process_id": 12345,
+      "container": true
+   },
+   "web": {
+      "method": "POST",
+      "url": "https://api.example.com/users",
+      "path": "/users",
+      "query_string": "source=signup",
+      "ip": "203.0.113.42",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "referer": "https://example.com/signup",
+      "protocol": "HTTP/1.1",
+      "port": "443",
+      "host": "api.example.com",
+      "https": true,
+      "query_params": {
+         "source": "signup"
+      }
+   },
+   "headers": {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      "Authorization": "[REDACTED]"
+   },
+   "request_body": {
+      "name": "John Doe",
+      "email": "john@example.com",
+      "password": "[REDACTED]"
+   },
+   "session": {
+      "id": "abc123def456",
+      "data_size": "2.3 KB"
+   }
 }
 ```
 
@@ -413,7 +413,7 @@ $logger = Logger::getInstance(new LoggerConfig([
 
 ## Laravel Integration
 
-Antler Error Logger integrates seamlessly with Laravel applications, providing enhanced error logging and monitoring for your Laravel projects.
+Antler Error Logger integrates easily with Laravel applications thanks to its singleton pattern. This section covers how to use the error logger directly in Laravel without additional facades or service providers.
 
 ### Supported Laravel Versions
 
@@ -430,7 +430,7 @@ Antler Error Logger is compatible with the following Laravel versions:
 
 > **Note**: For PHP 7.1 compatibility, you must use Laravel 5.8 or earlier. Laravel 6.0+ requires PHP 7.2+.
 
-### Installation in Laravel
+### Simple Installation
 
 1. Install the package via Composer:
 
@@ -438,284 +438,333 @@ Antler Error Logger is compatible with the following Laravel versions:
 composer require antlerops/error-logger
 ```
 
-2. Publish the configuration file:
+2. That's it! No service providers or facades required.
 
-```bash
-php artisan vendor:publish --provider="Antler\ErrorLogger\LaravelServiceProvider"
-```
+### Basic Usage in Laravel
 
-This will create a `config/antler-error-logger.php` configuration file in your application.
-
-### Laravel Service Provider
-
-When using Laravel, the package will automatically register its service provider if you're using Laravel's package auto-discovery. If auto-discovery is disabled, add the service provider manually to your `config/app.php` file:
+Since the Antler Error Logger uses a singleton pattern, you can access it directly in your Laravel application:
 
 ```php
-'providers' => [
-    // ...
-    Antler\ErrorLogger\LaravelServiceProvider::class,
-],
+use Antler\ErrorLogger\Logger;
+use Antler\ErrorLogger\LoggerConfig;
+use Antler\ErrorLogger\LogLevel;
+
+// In any controller, middleware, or service
+
+// Initialize once with your configuration (in a bootstrap file or service provider)
+$config = new LoggerConfig([
+    'project_hash' => env('ANTLER_PROJECT_HASH', 'your-project-identifier'),
+    'remote_endpoint' => env('ANTLER_LOG_ENDPOINT', 'https://your-log-endpoint.com'),
+    'log_file_path' => storage_path('logs/antler.log'),
+    'min_log_level' => LogLevel::WARNING,
+]);
+
+// Get the singleton instance
+$logger = Logger::getInstance($config);
+
+// Then use it anywhere in your application
+Logger::getInstance()->info('User logged in', ['user_id' => auth()->id()]);
+Logger::getInstance()->error('Payment failed', ['order_id' => $orderId]);
 ```
 
-### Configuration in Laravel
+### Recommended Setup in Laravel
 
-After publishing the configuration, you can modify the settings in the `config/antler-error-logger.php` file. The Laravel integration inherits all options from the standard configuration, with some Laravel-specific additions:
+#### Bootstrap Integration
+
+A clean way to integrate the logger is by initializing it in a service provider. You can use Laravel's `AppServiceProvider` or create a dedicated provider:
 
 ```php
-return [
-    // Standard ErrorLogger options
-    'project_hash' => env('ANTLER_PROJECT_HASH', null),
-    'remote_endpoint' => env('ANTLER_LOG_ENDPOINT', null),
-    'use_remote_logging' => env('ANTLER_LOG_USE_REMOTE_LOGGING', true),
-    'use_file_logging' => env('ANTLER_LOG_USE_FILE_LOGGING', true),
-    'use_error_log' => env('ANTLER_LOG_USE_ERROR_LOG', true),
-    'log_file_path' => env('ANTLER_LOG_FILE_PATH', storage_path('logs/antler.log')),
-    'min_log_level' => env('ANTLER_LOG_MIN_LOG_LEVEL', \Antler\ErrorLogger\LogLevel::WARNING),
-    'rate_limit_per_minute' => env('ANTLER_LOG_RATE_LIMIT_PER_MINUTE', 60),
-    'request_timeout' => env('ANTLER_LOG_REQUEST_TIMEOUT', 2),
+<?php
+// app/Providers/LoggingServiceProvider.php
 
-    // Laravel-specific options
-    'register_exception_handler' => env('ANTLER_REGISTER_EXCEPTION_HANDLER', true),
-    'log_queries' => env('ANTLER_LOG_QUERIES', false),
-    'log_queue_failures' => env('ANTLER_LOG_QUEUE_FAILURES', true),
-    'log_scheduled_task_failures' => env('ANTLER_LOG_SCHEDULED_TASK_FAILURES', true),
-    'capture_laravel_context' => env('ANTLER_CAPTURE_LARAVEL_CONTEXT', true),
-];
-```
+namespace App\Providers;
 
-### Integration with Laravel's Logging System
+use Antler\ErrorLogger\Logger;
+use Antler\ErrorLogger\LoggerConfig;
+use Antler\ErrorLogger\LogLevel;
+use Illuminate\Support\ServiceProvider;
 
-The package can integrate with Laravel's built-in logging system by adding a custom channel to your `config/logging.php` file:
-
-```php
-'channels' => [
-    // Other channels...
-    
-    'antler' => [
-        'driver' => 'custom',
-        'via' => \Antler\ErrorLogger\LaravelLoggerFactory::class,
-        'level' => env('ANTLER_LOG_LEVEL', 'warning'),
-    ],
-],
-```
-
-You can then use this channel in your application:
-
-```php
-Log::channel('antler')->error('Something went wrong', ['context' => 'additional information']);
-```
-
-Or set it as your default channel in `.env`:
-
-```
-LOG_CHANNEL=antler
-```
-
-### Usage with Laravel
-
-#### Basic Usage
-
-Once installed, the logger will automatically capture exceptions thrown in your Laravel application. You can also use it manually:
-
-```php
-use Antler\ErrorLogger\Facades\Logger;
-
-// In any controller or service
-Logger::error('Payment failed', ['order_id' => $orderId, 'amount' => $amount]);
-```
-
-#### Handling Exceptions
-
-The package registers an exception handler to capture all uncaught exceptions in your Laravel application. If you have custom exception handling, you can integrate it:
-
-```php
-// In app/Exceptions/Handler.php
-public function report(Throwable $exception)
+class LoggingServiceProvider extends ServiceProvider
 {
-    // Let Antler ErrorLogger handle the exception first
-    app('antler-error-logger')->error('Uncaught exception', [
-        'exception' => $exception,
-    ]);
-    
-    // Then continue with parent reporting
-    parent::report($exception);
+    public function register()
+    {
+        // Configuration for the Antler Error Logger
+        $config = new LoggerConfig([
+            'project_hash' => env('ANTLER_PROJECT_HASH'),
+            'remote_endpoint' => env('ANTLER_LOG_ENDPOINT'),
+            'log_file_path' => storage_path('logs/antler.log'),
+            'min_log_level' => $this->getLogLevel(),
+            'use_remote_logging' => env('ANTLER_LOG_USE_REMOTE_LOGGING', true),
+            'use_file_logging' => env('ANTLER_LOG_USE_FILE_LOGGING', true),
+            'use_error_log' => env('ANTLER_LOG_USE_ERROR_LOG', true),
+            'rate_limit_per_minute' => env('ANTLER_LOG_RATE_LIMIT_PER_MINUTE', 60),
+        ]);
+
+        // Initialize the logger singleton
+        Logger::getInstance($config);
+    }
+
+    /**
+     * Convert environment log level to LogLevel constant
+     */
+    private function getLogLevel()
+    {
+        $level = strtoupper(env('ANTLER_LOG_MIN_LOG_LEVEL', 'WARNING'));
+        
+        $levels = [
+            'DEBUG' => LogLevel::DEBUG,
+            'INFO' => LogLevel::INFO,
+            'WARNING' => LogLevel::WARNING,
+            'ERROR' => LogLevel::ERROR,
+            'CRITICAL' => LogLevel::CRITICAL
+        ];
+        
+        return $levels[$level] ?? LogLevel::WARNING;
+    }
 }
 ```
 
-#### Logging Queries (For Performance Monitoring)
-
-If you enable the `log_queries` option, the package will log slow database queries:
+Then register this provider in your `config/app.php`:
 
 ```php
-// In .env
-ANTLER_LOG_QUERIES=true
-ANTLER_SLOW_QUERY_THRESHOLD=1000 # in milliseconds
+'providers' => [
+    // Other providers...
+    App\Providers\LoggingServiceProvider::class,
+],
 ```
 
-#### Queue Job Failures
+#### Integrating with Laravel's Exception Handler
 
-When `log_queue_failures` is enabled, the package will automatically log failed queue jobs with detailed context.
-
-#### Scheduled Task Failures
-
-With `log_scheduled_task_failures` enabled, the package will log any failures in your scheduled tasks.
-
-### Laravel-Specific Context
-
-In addition to the standard context captured by Antler Error Logger, the Laravel integration also captures:
-
-- Current route information
-- Controller and action names
-- Active middleware
-- Current authenticated user (ID, email - no passwords/tokens)
-- Laravel version
-- Application environment (local, production, etc.)
-- Configuration settings (sensitive values redacted)
-
-### Examples in Laravel
-
-#### Logging in a Controller
+To capture all exceptions in your Laravel application, you can modify your exception handler:
 
 ```php
+<?php
+// app/Exceptions/Handler.php
+
+namespace App\Exceptions;
+
+use Antler\ErrorLogger\Logger;
+use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Throwable;
+
+class Handler extends ExceptionHandler
+{
+    // ... other methods ...
+
+    /**
+     * Report or log an exception.
+     *
+     * @param  \Throwable  $e
+     * @return void
+     */
+    public function report(Throwable $e)
+    {
+        // Log the exception with Antler Error Logger
+        Logger::getInstance()->error('Uncaught exception', [
+            'exception_class' => get_class($e),
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'exception' => $e, // The Logger will extract the enhanced stack trace
+        ]);
+        
+        parent::report($e);
+    }
+}
+```
+
+#### Usage in Models, Controllers, and Services
+
+Once initialized, you can use the logger anywhere in your application without dependency injection:
+
+```php
+<?php
+// In a controller
 namespace App\Http\Controllers;
 
-use Antler\ErrorLogger\Facades\Logger;
-use App\Models\Order;
+use Antler\ErrorLogger\Logger;
+use App\Models\User;
 use Exception;
 
-class OrderController extends Controller
+class UserController extends Controller
 {
-    public function process($id)
+    public function store()
     {
         try {
-            $order = Order::findOrFail($id);
+            $user = User::create(request()->all());
             
-            // Process order...
-            
-            Logger::info('Order processed successfully', [
-                'order_id' => $order->id,
-                'amount' => $order->amount,
+            Logger::getInstance()->info('User created', [
+                'user_id' => $user->id,
+                'email' => $user->email
             ]);
             
-            return response()->json(['status' => 'success']);
+            return redirect()->route('users.show', $user);
         } catch (Exception $e) {
-            Logger::error('Order processing failed', [
-                'order_id' => $id,
-                'exception' => $e,
+            Logger::getInstance()->error('Failed to create user', [
+                'input' => request()->except(['password']),
+                'exception' => $e
             ]);
             
-            return response()->json(['status' => 'error'], 500);
+            return back()->with('error', 'Failed to create user');
         }
     }
 }
 ```
 
-#### Logging in a Queue Job
+### Using Environment Variables in Laravel
+
+You can configure the logger using Laravel's `.env` file:
+
+```
+# Antler Error Logger Configuration
+ANTLER_PROJECT_HASH=your-project-identifier
+ANTLER_LOG_ENDPOINT=https://your-log-endpoint.com
+ANTLER_LOG_MIN_LOG_LEVEL=WARNING
+ANTLER_LOG_USE_REMOTE_LOGGING=true
+ANTLER_LOG_USE_FILE_LOGGING=true
+ANTLER_LOG_USE_ERROR_LOG=true
+ANTLER_LOG_RATE_LIMIT_PER_MINUTE=60
+```
+
+### Adapting to Laravel Environments
+
+You can adapt the logger configuration based on the Laravel environment:
 
 ```php
-namespace App\Jobs;
+// In your service provider
 
-use Antler\ErrorLogger\Facades\Logger;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
-
-class ProcessPodcast implements ShouldQueue
+public function register()
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    protected $podcastId;
-
-    public function __construct($podcastId)
-    {
-        $this->podcastId = $podcastId;
-    }
-
-    public function handle()
-    {
-        // Process the podcast...
-        
-        Logger::info('Podcast processed', [
-            'podcast_id' => $this->podcastId,
-            'processing_time' => $executionTime,
-        ]);
-    }
-
-    public function failed($exception)
-    {
-        Logger::error('Podcast processing failed', [
-            'podcast_id' => $this->podcastId,
-            'exception' => $exception,
-        ]);
-    }
+    $config = new LoggerConfig([
+        'project_hash' => env('ANTLER_PROJECT_HASH'),
+        'remote_endpoint' => env('ANTLER_LOG_ENDPOINT'),
+        'log_file_path' => storage_path('logs/antler.log'),
+        // Use more verbose logging in local development
+        'min_log_level' => app()->environment('local') ? LogLevel::DEBUG : LogLevel::WARNING,
+        // Disable remote logging in local development
+        'use_remote_logging' => app()->environment('local') ? false : true,
+    ]);
+    
+    Logger::getInstance($config);
 }
 ```
 
-### Version-Specific Notes for Laravel
+### Examples
 
-#### Laravel 6.x (PHP 7.2+)
+#### Logging Database Queries
 
-Laravel 6.x introduced semantic versioning, but dropped support for PHP 7.1. When using with Laravel 6.x, ensure you're running PHP 7.2 or higher.
-
-#### Laravel 7.x (PHP 7.2.5+)
-
-PHP 7.2.5 is the minimum requirement for Laravel 7.x. This version works well with the error logger with no special considerations.
-
-#### Laravel 8.x (PHP 7.3+)
-
-Laravel 8.x requires PHP 7.3 or higher. When using with Laravel 8.x, note that model factories changed to a class-based system, which may affect error context collection.
-
-#### Laravel 9.x+ (PHP 8.0.2+)
-
-Laravel 9.x and above require PHP 8.0.2 or higher and include many PHP 8 features. The error logger automatically detects and adapts to PHP 8-specific features like attributes, union types, and named arguments.
-
-### Performance Considerations in Laravel
-
-To minimize performance impact in Laravel, consider these settings:
+You can monitor slow database queries by registering a listener:
 
 ```php
-// Only in production environments
-if (app()->environment('production')) {
-    // Set more conservative rate limiting
-    config(['antler-error-logger.rate_limit_per_minute' => 30]);
-    
-    // Disable query logging in production
-    config(['antler-error-logger.log_queries' => false]);
-    
-    // Use non-blocking logging where possible
-    config(['antler-error-logger.request_timeout' => 1]);
+<?php
+// In a service provider
+
+use Antler\ErrorLogger\Logger;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\DB;
+
+public function boot()
+{
+    // Log slow queries (over 1000ms)
+    if (app()->environment('local', 'staging')) {
+        DB::listen(function (QueryExecuted $query) {
+            if ($query->time > 1000) {
+                Logger::getInstance()->warning('Slow database query detected', [
+                    'sql' => $query->sql,
+                    'bindings' => $query->bindings,
+                    'time' => $query->time . 'ms',
+                    'connection' => $query->connectionName,
+                ]);
+            }
+        });
+    }
 }
 ```
 
-### Troubleshooting in Laravel Environments
+#### Logging Queue Job Failures
 
-#### Common Issues in Laravel Environments
+To log failed queue jobs:
 
-1. **Permissions issues with log files:**
-   Make sure the storage directory is writable by your web server.
+```php
+<?php
+// In a service provider or bootstrap file
 
+use Antler\ErrorLogger\Logger;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Support\Facades\Queue;
+
+Queue::failing(function (JobFailed $event) {
+    Logger::getInstance()->error('Queue job failed', [
+        'connection' => $event->connectionName,
+        'job' => get_class($event->job),
+        'exception' => $event->exception,
+    ]);
+});
+```
+
+#### Adding Custom Context for Laravel
+
+You might want to add Laravel-specific context to your logs:
+
+```php
+<?php
+// Add this to your service provider or middleware
+
+use Antler\ErrorLogger\Logger;
+use Illuminate\Support\Facades\Auth;
+
+// Add Laravel-specific context
+Logger::getInstance()->info('Application booted', [
+    'laravel_version' => app()->version(),
+    'environment' => app()->environment(),
+    'user_id' => Auth::id() ?? 'guest',
+    'current_route' => request()->route() ? request()->route()->getName() : 'unknown',
+]);
+```
+
+### Performance Considerations
+
+For optimal performance in Laravel applications:
+
+1. **Configure appropriate log levels**:
+   - Use `DEBUG` only in development environments
+   - Use `WARNING` or `ERROR` in production
+
+2. **Adjust rate limiting**:
+   - For high-traffic applications, increase `rate_limit_per_minute`
+   - For API-heavy applications, consider setting it higher (e.g., 200-300)
+
+3. **File logging considerations**:
+   - Ensure your `storage/logs` directory is properly configured for rotation
+   - Consider disabling file logging in favor of remote logging in production
+
+### Troubleshooting
+
+#### Common Issues in Laravel
+
+1. **Logger not properly initialized**:
+   - Make sure the `Logger::getInstance($config)` is called early in the application lifecycle
+   - Check that your service provider is registered correctly
+
+2. **Permission issues with log files**:
+   - Ensure your web server has write permissions for the Laravel storage directory:
    ```bash
    chmod -R 775 storage/logs
    chown -R www-data:www-data storage/logs
    ```
 
-2. **Memory usage in large applications:**
-   For Laravel apps with many dependencies, watch memory usage during error processing:
+3. **Environment variables not loading**:
+   - Verify your `.env` file contains the correct variables
+   - Check that Laravel is correctly loading your `.env` file
+   - Run `php artisan config:clear` to clear the config cache
 
-   ```php
-   // In config/antler-error-logger.php
-   'collect_all_packages' => env('ANTLER_COLLECT_ALL_PACKAGES', false),
-   ```
+4. **Memory usage concerns**:
+   - If you're logging a high volume of events, watch your memory usage
+   - Consider using the Laravel queue system for processing logs asynchronously
 
-3. **Excessive logging from scheduler:**
-   If you run Laravel scheduler frequently, you may want to adjust settings:
-
-   ```php
-   // In config/antler-error-logger.php
-   'log_scheduled_task_output' => env('ANTLER_LOG_SCHEDULED_TASK_OUTPUT', false),
-   ```
+5. **Remote logging timeout**:
+   - For remote logging in production, set a low timeout (1-2 seconds) to prevent blocking
+   - Enable local file logging as a fallback for remote failures
 
 ## Troubleshooting
 
