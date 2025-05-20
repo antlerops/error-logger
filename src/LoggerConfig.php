@@ -16,6 +16,14 @@ class LoggerConfig
     private $reportPHPInfo;
     private $maxRequestBodySize;
 
+    // New configuration properties
+    private $samplingRate = 1.0;        // Default: log everything
+    private $circuitBreakerThreshold = 0; // Default: disabled
+    private $circuitBreakerCooldown = 60; // Default: 60 seconds
+    private $filters = []; // Message pattern filters
+    private $contextFilters = []; // Context key/value filters
+    private $asyncProcessing = false; // Default: disabled
+
     /**
      * Constructor to initialize the logging configuration.
      *
@@ -32,6 +40,10 @@ class LoggerConfig
      *                      - 'sensitive_key_patterns' (array): Additional patterns to redact from logs. Default: [].
      *                      - 'report_php_info' (bool): Whether to include detailed PHP configuration. Default: false.
      *                      - 'max_request_body_size' (int): Maximum size in bytes to log for request bodies. Default: 10240.
+     *                      - 'sampling_rate' (float): Sampling rate (0.0 to 1.0). Default: 1.0 (log everything)
+     *                      - 'circuit_breaker_threshold' (int): Errors per minute to trigger circuit breaker. Default: 0 (disabled)
+     *                      - 'circuit_breaker_cooldown' (int): Seconds to keep circuit open. Default: 60
+     *                      - 'async_processing' (bool): Whether to use async logging. Default: false
      *
      * @return void
      */
@@ -52,10 +64,16 @@ class LoggerConfig
         $this->useErrorLog = $this->getConfigBool($config, 'use_error_log', 'ANTLER_LOG_USE_ERROR_LOG', true);
         $this->rateLimitPerMinute = (int)$this->getConfigValue($config, 'rate_limit_per_minute', 'ANTLER_LOG_RATE_LIMIT_PER_MINUTE', 60);
 
-        // New configuration options
+        // Original additional configuration options
         $this->sensitiveKeyPatterns = $config['sensitive_key_patterns'] ?? [];
         $this->reportPHPInfo = $this->getConfigBool($config, 'report_php_info', 'ANTLER_LOG_REPORT_PHP_INFO', false);
         $this->maxRequestBodySize = (int)$this->getConfigValue($config, 'max_request_body_size', 'ANTLER_LOG_MAX_REQUEST_BODY_SIZE', 10240);
+
+        // New configuration options
+        $this->samplingRate = (float)$this->getConfigValue($config, 'sampling_rate', 'ANTLER_LOG_SAMPLING_RATE', 1.0);
+        $this->circuitBreakerThreshold = (int)$this->getConfigValue($config, 'circuit_breaker_threshold', 'ANTLER_LOG_CIRCUIT_BREAKER_THRESHOLD', 0);
+        $this->circuitBreakerCooldown = (int)$this->getConfigValue($config, 'circuit_breaker_cooldown', 'ANTLER_LOG_CIRCUIT_BREAKER_COOLDOWN', 60);
+        $this->asyncProcessing = $this->getConfigBool($config, 'async_processing', 'ANTLER_LOG_ASYNC_PROCESSING', false);
     }
 
     /**
@@ -260,5 +278,145 @@ class LoggerConfig
     public function getMaxRequestBodySize(): int
     {
         return $this->maxRequestBodySize;
+    }
+
+    // --- NEW METHODS ---
+
+    /**
+     * Get the sampling rate.
+     *
+     * @return float Sampling rate (0.0 to 1.0)
+     */
+    public function getSamplingRate(): float
+    {
+        return $this->samplingRate;
+    }
+
+    /**
+     * Set log sampling rate (0.0 to 1.0)
+     *
+     * @param float $rate Sampling rate (0.0 = log nothing, 1.0 = log everything)
+     * @return self
+     */
+    public function setSamplingRate(float $rate): self
+    {
+        $this->samplingRate = max(0.0, min(1.0, $rate));
+        return $this;
+    }
+
+    /**
+     * Get circuit breaker threshold.
+     *
+     * @return int Number of errors per minute to trigger circuit breaker (0 = disabled)
+     */
+    public function getCircuitBreakerThreshold(): int
+    {
+        return $this->circuitBreakerThreshold;
+    }
+
+    /**
+     * Set circuit breaker threshold (0 to disable)
+     *
+     * @param int $threshold Number of errors per minute to trigger circuit breaker
+     * @return self
+     */
+    public function setCircuitBreakerThreshold(int $threshold): self
+    {
+        $this->circuitBreakerThreshold = max(0, $threshold);
+        return $this;
+    }
+
+    /**
+     * Get circuit breaker cooldown period in seconds.
+     *
+     * @return int Cooldown period in seconds
+     */
+    public function getCircuitBreakerCooldown(): int
+    {
+        return $this->circuitBreakerCooldown;
+    }
+
+    /**
+     * Set circuit breaker cooldown period
+     *
+     * @param int $seconds Cooldown period in seconds
+     * @return self
+     */
+    public function setCircuitBreakerCooldown(int $seconds): self
+    {
+        $this->circuitBreakerCooldown = max(1, $seconds);
+        return $this;
+    }
+
+    /**
+     * Add a message pattern filter
+     *
+     * @param string $pattern Regex pattern to filter log messages
+     * @return self
+     */
+    public function addMessageFilter(string $pattern): self
+    {
+        $this->filters[] = $pattern;
+        return $this;
+    }
+
+    /**
+     * Add a context key/value filter
+     *
+     * @param string $key Context key to check
+     * @param mixed $value Value or regex pattern to match
+     * @param bool $isRegex Whether $value is a regex pattern
+     * @return self
+     */
+    public function addContextFilter(string $key, $value, bool $isRegex = false): self
+    {
+        $this->contextFilters[] = [
+            'key' => $key,
+            'value' => $value,
+            'is_regex' => $isRegex
+        ];
+        return $this;
+    }
+
+    /**
+     * Get message filters
+     *
+     * @return array List of message filter patterns
+     */
+    public function getMessageFilters(): array
+    {
+        return $this->filters;
+    }
+
+    /**
+     * Get context filters
+     *
+     * @return array List of context filters
+     */
+    public function getContextFilters(): array
+    {
+        return $this->contextFilters;
+    }
+
+    /**
+     * Check if async processing is enabled
+     *
+     * @return bool
+     */
+    public function useAsyncProcessing(): bool
+    {
+        return $this->asyncProcessing;
+    }
+
+    /**
+     * Enable or disable asynchronous processing
+     *
+     * @param bool $enabled Whether to enable async processing
+     * @return self
+     */
+    public function setAsyncProcessing(bool $enabled): self
+    {
+        $this->asyncProcessing = $enabled;
+        return $this;
     }
 }

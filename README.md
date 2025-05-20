@@ -13,6 +13,14 @@ An advanced PHP error logging system with comprehensive context capture, multipl
 - **Performance Monitoring**: Tracks memory usage and execution time for errors
 - **Simple Integration**: Drop-in error handling with minimal configuration
 - **Container-Aware**: Detects containerized environments
+- **Contextual Tagging**: Tag logs for better categorization and filtering
+- **Request Tracking**: Correlate logs from the same request with request IDs
+- **Performance Instrumentation**: Built-in timers for measuring code execution time
+- **Nested Context**: Maintain hierarchical context through code execution
+- **Sampling**: Control log volume with configurable sampling rates
+- **Circuit Breaker**: Prevent log flooding during error cascades
+- **Log Filtering**: Filter logs based on message patterns or context values
+- **Asynchronous Processing**: Non-blocking log processing for better performance
 
 ## Installation
 
@@ -57,17 +65,21 @@ try {
 
 ## Configuration Options
 
-| Config Key              | Default Value           | Description                                               |
-|-------------------------|-------------------------|-----------------------------------------------------------|
-| `project_hash`          | `null`                  | **Required**: Unique project identifier                   |
-| `remote_endpoint`       | `null`                  | Remote logging API URL (Required for remote logging)      |
-| `log_file_path`         | `./logs/application.log`| Path to local log file                                    |
-| `request_timeout`       | `2`                     | Timeout in seconds for remote requests                    |
-| `min_log_level`         | `LogLevel::WARNING`     | Minimum severity level to log (DEBUG to CRITICAL)         |
-| `use_remote_logging`    | `true`                  | Enable/disable remote logging                             |
-| `use_file_logging`      | `true`                  | Enable/disable local file logging                         |
-| `use_error_log`         | `true`                  | Use PHP error_log() for ERROR+ levels                     |
-| `rate_limit_per_minute` | `60`                    | Maximum allowed logs per minute to prevent flooding       |
+| Config Key                  | Default Value           | Description                                               |
+|-----------------------------|-------------------------|-----------------------------------------------------------|
+| `project_hash`              | `null`                  | **Required**: Unique project identifier                   |
+| `remote_endpoint`           | `null`                  | Remote logging API URL (Required for remote logging)      |
+| `log_file_path`             | `./logs/application.log`| Path to local log file                                    |
+| `request_timeout`           | `2`                     | Timeout in seconds for remote requests                    |
+| `min_log_level`             | `LogLevel::WARNING`     | Minimum severity level to log (DEBUG to CRITICAL)         |
+| `use_remote_logging`        | `true`                  | Enable/disable remote logging                             |
+| `use_file_logging`          | `true`                  | Enable/disable local file logging                         |
+| `use_error_log`             | `true`                  | Use PHP error_log() for ERROR+ levels                     |
+| `rate_limit_per_minute`     | `60`                    | Maximum allowed logs per minute to prevent flooding       |
+| `sampling_rate`             | `1.0`                   | Sampling rate for logs (0.0 to 1.0)                      |
+| `circuit_breaker_threshold` | `0`                     | Errors per minute to trigger circuit breaker (0=disabled) |
+| `circuit_breaker_cooldown`  | `60`                    | Seconds to keep circuit breaker open                      |
+| `async_processing`          | `false`                 | Send logs asynchronously (non-blocking)                   |
 
 ## Environment Variables
 
@@ -83,6 +95,10 @@ ANTLER_LOG_USE_REMOTE_LOGGING="true"
 ANTLER_LOG_USE_FILE_LOGGING="true"
 ANTLER_LOG_USE_ERROR_LOG="true"
 ANTLER_LOG_RATE_LIMIT_PER_MINUTE="100"
+ANTLER_LOG_SAMPLING_RATE="1.0"
+ANTLER_LOG_CIRCUIT_BREAKER_THRESHOLD="0"
+ANTLER_LOG_CIRCUIT_BREAKER_COOLDOWN="60"
+ANTLER_LOG_ASYNC_PROCESSING="false"
 ```
 
 Configuration in code overrides environment variables.
@@ -111,6 +127,142 @@ LogLevel::INFO     // 200 - Interesting events in your application
 LogLevel::WARNING  // 300 - Non-error but potentially problematic situations
 LogLevel::ERROR    // 400 - Runtime errors that don't require immediate action
 LogLevel::CRITICAL // 500 - Critical errors requiring immediate intervention
+```
+
+## Contextual Tagging
+
+Tags allow you to categorize log entries for easier filtering and analysis.
+
+```php
+// Set default tags for all logs
+$logger->setDefaultTags(['app:api', 'env:production']);
+
+// Log with specific tags
+$logger->error("Payment failed", [
+    'order_id' => 12345,
+    'tags' => ['module:payments', 'customer:premium']
+]);
+
+// Result will include tags: ['app:api', 'env:production', 'module:payments', 'customer:premium']
+```
+
+## Log Entry and Request Tracking
+
+Each log entry now includes a unique ID, and logs from the same request are linked with a request ID:
+
+```php
+// All logs created in the same request will share the same request_id 
+$logger->info("Processing started");
+$logger->debug("Query executed", ['query' => $sql]);
+$logger->info("Processing completed");
+
+// For web requests, any existing X-Request-ID header will be used as the request ID
+```
+
+## Performance Instrumentation
+
+Track execution time and memory usage:
+
+```php
+// Start a timer
+$logger->startTimer('database_query');
+
+// Run database query
+$results = $db->query($sql);
+
+// Stop timer and log results
+$logger->stopTimer('database_query', 'User search query completed', [
+    'query' => $sql,
+    'result_count' => count($results)
+]);
+
+// Log output will include duration_ms and memory_usage
+```
+
+## Nested Context Support
+
+Maintain a context stack throughout code execution:
+
+```php
+// Push user context
+$logger->pushContext(['user_id' => 123, 'role' => 'admin']);
+
+// Log something with this context automatically included
+$logger->info('User accessed admin panel');
+
+// Push another context for a specific operation
+$logger->pushContext(['operation' => 'user_update']);
+
+// This log will have both user and operation context
+$logger->info('Changed user email', ['old_email' => 'old@example.com', 'new_email' => 'new@example.com']);
+
+// Pop operation context when done
+$logger->popContext();
+
+// This log will only have the user context
+$logger->info('Admin panel exited');
+
+// Pop user context
+$logger->popContext();
+```
+
+## Sampling and Circuit Breaker
+
+Reduce log volume in high-traffic scenarios:
+
+```php
+// Configure log sampling (log 10% of entries)
+$config = new LoggerConfig([
+    'project_hash' => 'your-project',
+    'sampling_rate' => 0.1, // Log 10% of entries
+]);
+
+// Configure circuit breaker (stop logging errors after threshold reached)
+$config = new LoggerConfig([
+    'project_hash' => 'your-project',
+    'circuit_breaker_threshold' => 100, // Open circuit after 100 errors per minute
+    'circuit_breaker_cooldown' => 60,   // Keep circuit open for 60 seconds
+]);
+
+$logger = Logger::getInstance($config);
+```
+
+## Log Filtering
+
+Filter out unwanted log entries:
+
+```php
+$config = new LoggerConfig([
+    'project_hash' => 'your-project'
+]);
+
+// Add a message pattern filter (regex)
+$config->addMessageFilter('/^Cache miss for key/');
+
+// Add a context key/value filter (exact match)
+$config->addContextFilter('status_code', 404);
+
+// Add a context regex filter
+$config->addContextFilter('url', '/\.jpg$/', true);
+
+$logger = Logger::getInstance($config);
+```
+
+## Asynchronous Processing
+
+Process logs without blocking application execution:
+
+```php
+$config = new LoggerConfig([
+    'project_hash' => 'your-project',
+    'remote_endpoint' => 'https://your-log-endpoint.com',
+    'async_processing' => true
+]);
+
+$logger = Logger::getInstance($config);
+
+// Logs will be sent asynchronously without blocking
+$logger->info("User registered", ['user_id' => $userId]);
 ```
 
 ## Automatic Context Capture
@@ -181,10 +333,13 @@ Here's an example of what the logger sends to remote endpoints, including the en
 ```json
 {
   "project_hash": "example-project",
+  "uuid": "log_5e9f8a7b6c5d4",
+  "request_id": "d4c3b2a1-e5f6-7g8h",
   "timestamp": "2023-09-15T14:23:01+00:00",
   "level": 400,
   "level_name": "ERROR",
   "message": "Database connection failed",
+  "tags": ["app:api", "env:production"],
   "context": {
     "exception_class": "PDOException",
     "file": "/var/www/app/src/Database.php",
@@ -395,7 +550,9 @@ $logger = Logger::getInstance(new LoggerConfig([
     'min_log_level' => LogLevel::ERROR,
     'use_file_logging' => false,       // Skip file logging for performance
     'rate_limit_per_minute' => 200,    // Higher rate limit
-    'request_timeout' => 1             // Lower timeout to prevent blocking
+    'request_timeout' => 1,            // Lower timeout to prevent blocking
+    'sampling_rate' => 0.2,            // Sample 20% of all logs
+    'async_processing' => true         // Async processing for better performance
 ]));
 ```
 
@@ -499,6 +656,9 @@ class LoggingServiceProvider extends ServiceProvider
             'use_file_logging' => env('ANTLER_LOG_USE_FILE_LOGGING', true),
             'use_error_log' => env('ANTLER_LOG_USE_ERROR_LOG', true),
             'rate_limit_per_minute' => env('ANTLER_LOG_RATE_LIMIT_PER_MINUTE', 60),
+            'sampling_rate' => env('ANTLER_LOG_SAMPLING_RATE', 1.0),
+            'circuit_breaker_threshold' => env('ANTLER_LOG_CIRCUIT_BREAKER_THRESHOLD', 0),
+            'async_processing' => env('ANTLER_LOG_ASYNC_PROCESSING', false),
         ]);
 
         // Initialize the logger singleton
@@ -574,199 +734,6 @@ class Handler extends ExceptionHandler
 }
 ```
 
-#### Usage in Models, Controllers, and Services
-
-Once initialized, you can use the logger anywhere in your application without dependency injection:
-
-```php
-<?php
-// In a controller
-namespace App\Http\Controllers;
-
-use Antler\ErrorLogger\Logger;
-use App\Models\User;
-use Exception;
-
-class UserController extends Controller
-{
-    public function store()
-    {
-        try {
-            $user = User::create(request()->all());
-            
-            Logger::getInstance()->info('User created', [
-                'user_id' => $user->id,
-                'email' => $user->email
-            ]);
-            
-            return redirect()->route('users.show', $user);
-        } catch (Exception $e) {
-            Logger::getInstance()->error('Failed to create user', [
-                'input' => request()->except(['password']),
-                'exception' => $e
-            ]);
-            
-            return back()->with('error', 'Failed to create user');
-        }
-    }
-}
-```
-
-### Using Environment Variables in Laravel
-
-You can configure the logger using Laravel's `.env` file:
-
-```
-# Antler Error Logger Configuration
-ANTLER_PROJECT_HASH=your-project-identifier
-ANTLER_LOG_ENDPOINT=https://your-log-endpoint.com
-ANTLER_LOG_MIN_LOG_LEVEL=WARNING
-ANTLER_LOG_USE_REMOTE_LOGGING=true
-ANTLER_LOG_USE_FILE_LOGGING=true
-ANTLER_LOG_USE_ERROR_LOG=true
-ANTLER_LOG_RATE_LIMIT_PER_MINUTE=60
-```
-
-### Adapting to Laravel Environments
-
-You can adapt the logger configuration based on the Laravel environment:
-
-```php
-// In your service provider
-
-public function register()
-{
-    $config = new LoggerConfig([
-        'project_hash' => env('ANTLER_PROJECT_HASH'),
-        'remote_endpoint' => env('ANTLER_LOG_ENDPOINT'),
-        'log_file_path' => storage_path('logs/antler.log'),
-        // Use more verbose logging in local development
-        'min_log_level' => app()->environment('local') ? LogLevel::DEBUG : LogLevel::WARNING,
-        // Disable remote logging in local development
-        'use_remote_logging' => app()->environment('local') ? false : true,
-    ]);
-    
-    Logger::getInstance($config);
-}
-```
-
-### Examples
-
-#### Logging Database Queries
-
-You can monitor slow database queries by registering a listener:
-
-```php
-<?php
-// In a service provider
-
-use Antler\ErrorLogger\Logger;
-use Illuminate\Database\Events\QueryExecuted;
-use Illuminate\Support\Facades\DB;
-
-public function boot()
-{
-    // Log slow queries (over 1000ms)
-    if (app()->environment('local', 'staging')) {
-        DB::listen(function (QueryExecuted $query) {
-            if ($query->time > 1000) {
-                Logger::getInstance()->warning('Slow database query detected', [
-                    'sql' => $query->sql,
-                    'bindings' => $query->bindings,
-                    'time' => $query->time . 'ms',
-                    'connection' => $query->connectionName,
-                ]);
-            }
-        });
-    }
-}
-```
-
-#### Logging Queue Job Failures
-
-To log failed queue jobs:
-
-```php
-<?php
-// In a service provider or bootstrap file
-
-use Antler\ErrorLogger\Logger;
-use Illuminate\Queue\Events\JobFailed;
-use Illuminate\Support\Facades\Queue;
-
-Queue::failing(function (JobFailed $event) {
-    Logger::getInstance()->error('Queue job failed', [
-        'connection' => $event->connectionName,
-        'job' => get_class($event->job),
-        'exception' => $event->exception,
-    ]);
-});
-```
-
-#### Adding Custom Context for Laravel
-
-You might want to add Laravel-specific context to your logs:
-
-```php
-<?php
-// Add this to your service provider or middleware
-
-use Antler\ErrorLogger\Logger;
-use Illuminate\Support\Facades\Auth;
-
-// Add Laravel-specific context
-Logger::getInstance()->info('Application booted', [
-    'laravel_version' => app()->version(),
-    'environment' => app()->environment(),
-    'user_id' => Auth::id() ?? 'guest',
-    'current_route' => request()->route() ? request()->route()->getName() : 'unknown',
-]);
-```
-
-### Performance Considerations
-
-For optimal performance in Laravel applications:
-
-1. **Configure appropriate log levels**:
-   - Use `DEBUG` only in development environments
-   - Use `WARNING` or `ERROR` in production
-
-2. **Adjust rate limiting**:
-   - For high-traffic applications, increase `rate_limit_per_minute`
-   - For API-heavy applications, consider setting it higher (e.g., 200-300)
-
-3. **File logging considerations**:
-   - Ensure your `storage/logs` directory is properly configured for rotation
-   - Consider disabling file logging in favor of remote logging in production
-
-### Troubleshooting
-
-#### Common Issues in Laravel
-
-1. **Logger not properly initialized**:
-   - Make sure the `Logger::getInstance($config)` is called early in the application lifecycle
-   - Check that your service provider is registered correctly
-
-2. **Permission issues with log files**:
-   - Ensure your web server has write permissions for the Laravel storage directory:
-   ```bash
-   chmod -R 775 storage/logs
-   chown -R www-data:www-data storage/logs
-   ```
-
-3. **Environment variables not loading**:
-   - Verify your `.env` file contains the correct variables
-   - Check that Laravel is correctly loading your `.env` file
-   - Run `php artisan config:clear` to clear the config cache
-
-4. **Memory usage concerns**:
-   - If you're logging a high volume of events, watch your memory usage
-   - Consider using the Laravel queue system for processing logs asynchronously
-
-5. **Remote logging timeout**:
-   - For remote logging in production, set a low timeout (1-2 seconds) to prevent blocking
-   - Enable local file logging as a fallback for remote failures
-
 ## Troubleshooting
 
 ### Remote Logging Not Working
@@ -810,6 +777,29 @@ The logger automatically registers handlers for:
 - Fatal errors (via `register_shutdown_function`)
 
 These handlers capture detailed information about errors, including the enhanced stack traces with code context, and send them through all configured transports.
+
+## Remote Payload Changes
+
+The logger now includes the following additional fields in the remote payload:
+
+```json
+{
+  "project_hash": "example-project",
+  "uuid": "log_5e9f8a7b6c5d4",         // NEW: Unique ID for this log entry
+  "request_id": "d4c3b2a1-e5f6-7g8h",  // NEW: Request ID for correlating logs
+  "timestamp": "2023-09-15T14:23:01+00:00",
+  "level": 400,
+  "level_name": "ERROR",
+  "message": "Database connection failed",
+  "tags": ["app:api", "env:production"], // NEW: Tags for categorization
+  "context": {
+    // Context data
+  },
+  // Other existing fields remain unchanged
+}
+```
+
+These additions are backward compatible with existing remote endpoints, as they only add new fields without modifying or removing existing ones.
 
 ## Contributing
 
