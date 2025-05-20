@@ -15,6 +15,15 @@ class Logger
     private $startTime;
     private $memoryUsageStart;
 
+    // New properties for improvements
+    private $defaultTags = [];
+    private $requestId = null;
+    private $timers = [];
+    private $contextStack = [];
+    private $circuitOpen = false;
+    private $circuitOpenTime = 0;
+    private $errorCounter = [];
+
     /**
      * Private constructor to enforce singleton pattern
      *
@@ -26,6 +35,9 @@ class Logger
         $this->isCli = php_sapi_name() === 'cli';
         $this->startTime = microtime(true);
         $this->memoryUsageStart = memory_get_usage(true);
+
+        // Generate request ID
+        $this->requestId = $this->generateRequestId();
 
         if (!$this->config->getProjectHash()) {
             throw new RuntimeException('Project hash is not configured!');
@@ -45,9 +57,45 @@ class Logger
     }
 
     /**
+     * Generate a request ID
+     */
+    private function generateRequestId(): string
+    {
+        // Check for existing request ID header
+        if (!$this->isCli && isset($_SERVER['HTTP_X_REQUEST_ID'])) {
+            return $_SERVER['HTTP_X_REQUEST_ID'];
+        }
+
+        // Generate RFC 4122 UUID v4
+        if (function_exists('random_bytes')) {
+            $data = random_bytes(16);
+        } elseif (function_exists('openssl_random_pseudo_bytes')) {
+            $data = openssl_random_pseudo_bytes(16);
+        } else {
+            $data = '';
+            for ($i = 0; $i < 16; $i++) {
+                $data .= chr(mt_rand(0, 255));
+            }
+        }
+
+        $data[6] = chr(ord($data[6]) & 0x0f | 0x40); // Set version to 0100
+        $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // Set bits 6-7 to 10
+
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+    }
+
+    /**
+     * Generate a unique ID for each log entry
+     */
+    private function generateEntryId(): string
+    {
+        return uniqid('log_', true);
+    }
+
+    /**
      * Create log directory if it doesn't exist
      */
-    private function ensureLogDirectoryExists(): void
+    private function ensureLogDirectoryExists()
     {
         $logDir = dirname($this->config->getLogFilePath());
         if (!is_dir($logDir)) {
@@ -99,10 +147,10 @@ class Logger
      *
      * @return void
      */
-    private function setupErrorHandlers(): void
+    private function setupErrorHandlers()
     {
         // Exception handler
-        set_exception_handler(function (Throwable $e): void {
+        set_exception_handler(function (Throwable $e) {
             // Get enhanced stack trace with code context
             $enhancedTrace = CodeFrame::enhancedTraceFromException($e);
 
@@ -120,7 +168,7 @@ class Logger
         });
 
         // Error handler
-        set_error_handler(function (int $severity, string $message, string $file, int $line): bool {
+        set_error_handler(function (int $severity, string $message, string $file, int $line) {
             if (!(error_reporting() & $severity)) return false;
 
             // PHP 7 compatible error level matching
@@ -154,7 +202,7 @@ class Logger
         });
 
         // Shutdown handler for fatal errors
-        register_shutdown_function(function (): void {
+        register_shutdown_function(function () {
             $error = error_get_last();
             if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
                 // Add code context for fatal errors if possible
@@ -218,7 +266,6 @@ class Logger
         return $errorTypes[$type] ?? 'UNKNOWN_ERROR_TYPE';
     }
 
-    // Rest of the class remains unchanged...
     /**
      * Format bytes to human-readable string
      */
@@ -235,7 +282,7 @@ class Logger
     /**
      * Check if we should rate limit this log entry
      */
-    private function shouldRateLimit(int $level): bool
+    private function shouldRateLimit(int $level)
     {
         $minute = date('YmdHi');
 
@@ -250,6 +297,119 @@ class Logger
                 $this->writeToErrorLog("Log rate limit reached for this minute", LogLevel::WARNING);
             }
             return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if we should sample this log entry
+     */
+    private function shouldSample()
+    {
+        $rate = $this->config->getSamplingRate();
+
+        // Always log if sampling is disabled (rate = 1.0)
+        if ($rate >= 1.0) {
+            return true;
+        }
+
+        // Never log if sampling is set to zero
+        if ($rate <= 0.0) {
+            return false;
+        }
+
+        // Sample based on probability
+        return (mt_rand(1, 100) <= ($rate * 100));
+    }
+
+    /**
+     * Check if circuit breaker is active
+     */
+    private function isCircuitOpen()
+    {
+        // Check if circuit breaker is disabled
+        if ($this->config->getCircuitBreakerThreshold() <= 0) {
+            return false;
+        }
+
+        // Check if circuit is already open
+        if ($this->circuitOpen) {
+            // Check cooldown period
+            if (time() - $this->circuitOpenTime >= $this->config->getCircuitBreakerCooldown()) {
+                // Cooldown completed, reset circuit
+                $this->circuitOpen = false;
+                $this->errorCounter = [];
+                return false;
+            }
+            return true;
+        }
+
+        // Check error threshold
+        $minute = date('YmdHi');
+
+        if (!isset($this->errorCounter[$minute])) {
+            $this->errorCounter = [$minute => 1]; // Reset counter for new minute
+            return false;
+        }
+
+        // Check if threshold reached
+        if ($this->errorCounter[$minute]++ >= $this->config->getCircuitBreakerThreshold()) {
+            // Open the circuit
+            $this->circuitOpen = true;
+            $this->circuitOpenTime = time();
+
+            // Log circuit breaker activation
+            $this->writeToErrorLog(
+                "Circuit breaker activated: too many errors in a short period",
+                LogLevel::WARNING
+            );
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if log should be filtered
+     *
+     * @param string $message Log message
+     * @param array $context Log context
+     * @return bool True if log should be filtered (not logged)
+     */
+    private function shouldFilter(string $message, array $context)
+    {
+        // Check message filters
+        foreach ($this->config->getMessageFilters() as $pattern) {
+            if (preg_match($pattern, $message)) {
+                return true;
+            }
+        }
+
+        // Check context filters
+        foreach ($this->config->getContextFilters() as $filter) {
+            $key = $filter['key'];
+            $value = $filter['value'];
+            $isRegex = $filter['is_regex'];
+
+            // Skip if key doesn't exist
+            if (!array_key_exists($key, $context)) {
+                continue;
+            }
+
+            // Check value
+            if ($isRegex) {
+                // Regex match
+                if (is_string($context[$key]) && preg_match($value, $context[$key])) {
+                    return true;
+                }
+            } else {
+                // Exact match
+                if ($context[$key] === $value) {
+                    return true;
+                }
+            }
         }
 
         return false;
@@ -488,6 +648,8 @@ class Logger
 
         $payload = [
             'project_hash' => $this->config->getProjectHash(),
+            'uuid' => $this->generateEntryId(), // Add unique ID for this log entry
+            'request_id' => $this->requestId,   // Add request ID for correlating logs
             'timestamp' => (new DateTime())->format(DateTime::ATOM),
             'level' => $level,
             'level_name' => LogLevel::toString($level),
@@ -495,7 +657,17 @@ class Logger
             'context' => $context,
             'system' => $systemInfo,
             'environment' => $envInfo,
+            // Add tags field (merging context tags with default tags)
+            'tags' => array_unique(array_merge(
+                $this->defaultTags,
+                $context['tags'] ?? []
+            )),
         ];
+
+        // Remove tags from context to avoid duplication
+        if (isset($context['tags'])) {
+            unset($payload['context']['tags']);
+        }
 
         // Add appropriate information based on execution context
         if ($this->isCli) {
@@ -544,7 +716,12 @@ class Logger
                 throw new RuntimeException('JSON encoding failed: ' . json_last_error_msg());
             }
 
-            $this->sendViaCurl($jsonPayload) || $this->sendViaStream($jsonPayload);
+            // Send asynchronously if enabled
+            if ($this->config->useAsyncProcessing()) {
+                $this->sendAsyncViaCurl($jsonPayload);
+            } else {
+                $this->sendViaCurl($jsonPayload) || $this->sendViaStream($jsonPayload);
+            }
         } catch (Throwable $e) {
             $this->writeToErrorLog("Error reporting failed: {$e->getMessage()}", LogLevel::ERROR);
         }
@@ -639,9 +816,46 @@ class Logger
     }
 
     /**
+     * Send via cURL asynchronously
+     */
+    private function sendAsyncViaCurl(string $jsonPayload): bool
+    {
+        if (!function_exists('curl_init') || !extension_loaded('curl')) {
+            return false;
+        }
+
+        $ch = curl_init($this->config->getRemoteEndpoint());
+        if ($ch === false) {
+            return false;
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $jsonPayload,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'User-Agent: Antler-ErrorLogger/1.0',
+                'Accept: application/json'
+            ],
+            CURLOPT_TIMEOUT => $this->config->getRequestTimeout(),
+            CURLOPT_CONNECTTIMEOUT => min(5, $this->config->getRequestTimeout()),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FAILONERROR => true,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_NOSIGNAL => 1, // Required for CURLOPT_TIMEOUT to work in multithreaded environments
+        ]);
+
+        // Execute asynchronously (fire and forget)
+        curl_exec($ch);
+        curl_close($ch);
+
+        return true;
+    }
+
+    /**
      * Main log method
      */
-    public function log(int $level, string $message, array $context = []): void
+    public function log(int $level, string $message, array $context = [])
     {
         // Check minimum log level
         if ($level < $this->config->getMinLogLevel()) {
@@ -651,6 +865,26 @@ class Logger
         // Check rate limiting
         if ($this->shouldRateLimit($level)) {
             return;
+        }
+
+        // Check sampling
+        if (!$this->shouldSample()) {
+            return;
+        }
+
+        // Check circuit breaker (only for errors and higher)
+        if ($level >= LogLevel::ERROR && $this->isCircuitOpen()) {
+            return;
+        }
+
+        // Check filtering
+        if ($this->shouldFilter($message, $context)) {
+            return;
+        }
+
+        // Merge context stack with the provided context
+        if (!empty($this->contextStack)) {
+            $context = array_merge_recursive($this->getMergedContext(), $context);
         }
 
         // Format log entry
@@ -669,7 +903,7 @@ class Logger
     /**
      * Debug level log
      */
-    public function debug(string $message, array $context = []): void
+    public function debug(string $message, array $context = [])
     {
         $this->log(LogLevel::DEBUG, $message, $context);
     }
@@ -677,7 +911,7 @@ class Logger
     /**
      * Info level log
      */
-    public function info(string $message, array $context = []): void
+    public function info(string $message, array $context = [])
     {
         $this->log(LogLevel::INFO, $message, $context);
     }
@@ -685,7 +919,7 @@ class Logger
     /**
      * Warning level log
      */
-    public function warning(string $message, array $context = []): void
+    public function warning(string $message, array $context = [])
     {
         $this->log(LogLevel::WARNING, $message, $context);
     }
@@ -693,7 +927,7 @@ class Logger
     /**
      * Error level log
      */
-    public function error(string $message, array $context = []): void
+    public function error(string $message, array $context = [])
     {
         $this->log(LogLevel::ERROR, $message, $context);
     }
@@ -701,8 +935,121 @@ class Logger
     /**
      * Critical level log
      */
-    public function critical(string $message, array $context = []): void
+    public function critical(string $message, array $context = [])
     {
         $this->log(LogLevel::CRITICAL, $message, $context);
+    }
+
+    // --- NEW METHODS ---
+
+    /**
+     * Set default tags that will be added to all log entries
+     *
+     * @param array $tags List of tags to include with all log entries
+     * @return self
+     */
+    public function setDefaultTags(array $tags)
+    {
+        $this->defaultTags = $tags;
+        return $this;
+    }
+
+    /**
+     * Start a timer for performance tracking
+     *
+     * @param string $name Timer name
+     * @return self
+     */
+    public function startTimer(string $name)
+    {
+        $this->timers[$name] = [
+            'start' => microtime(true),
+            'memory_start' => memory_get_usage(true)
+        ];
+        return $this;
+    }
+
+    /**
+     * Stop a timer and log the results
+     *
+     * @param string $name Timer name
+     * @param string $message Log message
+     * @param array $context Additional context
+     * @param int $level Log level
+     * @return self
+     */
+    public function stopTimer(string $name, string $message = null, array $context = [], int $level = LogLevel::DEBUG)
+    {
+        if (!isset($this->timers[$name])) {
+            $this->warning("Cannot stop timer '$name': timer not started");
+            return $this;
+        }
+
+        $end = microtime(true);
+        $memoryEnd = memory_get_usage(true);
+
+        $duration = round(($end - $this->timers[$name]['start']) * 1000, 2); // ms
+        $memoryUsed = $memoryEnd - $this->timers[$name]['memory_start'];
+
+        $logMessage = $message ?? "Timer '$name' completed";
+        $logContext = array_merge($context, [
+            'timer' => [
+                'name' => $name,
+                'duration_ms' => $duration,
+                'memory_bytes' => $memoryUsed,
+                'memory_formatted' => $this->formatBytes($memoryUsed)
+            ]
+        ]);
+
+        $this->log($level, $logMessage, $logContext);
+
+        unset($this->timers[$name]);
+
+        return $this;
+    }
+
+    /**
+     * Push a context to the stack
+     *
+     * @param array $context Context data to push
+     * @return self
+     */
+    public function pushContext(array $context)
+    {
+        $this->contextStack[] = $context;
+        return $this;
+    }
+
+    /**
+     * Pop a context from the stack
+     *
+     * @return array The popped context
+     */
+    public function popContext()
+    {
+        if (empty($this->contextStack)) {
+            return [];
+        }
+
+        return array_pop($this->contextStack);
+    }
+
+    /**
+     * Get the merged context stack
+     *
+     * @return array Merged context
+     */
+    private function getMergedContext()
+    {
+        if (empty($this->contextStack)) {
+            return [];
+        }
+
+        $merged = [];
+        foreach ($this->contextStack as $context) {
+            $merged = array_merge_recursive($merged, $context);
+        }
+
+        return $merged;
     }
 }
